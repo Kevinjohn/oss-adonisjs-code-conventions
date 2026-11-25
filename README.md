@@ -21,7 +21,9 @@ belongs to no product. A repository adopts it by linking here from its
 
 [skills/adonisjs-conventions-review](./skills/adonisjs-conventions-review/SKILL.md) reviews a
 repository, or a folder in one, against the AdonisJS checklist and writes the findings as
-`findings.json` and `report.md`. It is read-only: it reports, and does not fix.
+`findings.json` and `report.md`. It is read-only: it reports, and does not fix. It can review only
+the lines a branch changed. Example code and build output are left out unless the request names
+them.
 
 Install it by linking the folder into the skills folder your agent reads, from a checkout of this
 repository. The skill reads the checklist from that checkout, so `git pull` updates both.
@@ -43,7 +45,8 @@ and, when the checked repository has one, the same table in that repository's ow
 node /path/to/this/repository/scripts/check-terminology.mjs
 ```
 
-Run it from the root of the repository to check. `npm test` here runs the check's own tests.
+Run it from the root of the repository to check. `npm test` here runs the tests of the check and
+of the review skill's script.
 
 ## What a repository keeps for itself
 

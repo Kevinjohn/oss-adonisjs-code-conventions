@@ -57,7 +57,7 @@ Items:
 
 Mechanical checks:
 
-- [ ] `grep -rnE "from '\.\.?/" app start config providers 2>/dev/null` prints nothing (application)
+- [ ] `grep -rnE "from '\.\.?/" app start config providers 2>/dev/null` prints nothing in an application (IMP-4)
 
 Items:
 
@@ -116,8 +116,8 @@ Items:
 
 Mechanical checks:
 
-- [ ] `grep -rnE "process\.env|#start/env" app providers 2>/dev/null` prints nothing
-- [ ] `grep -rnE "from '#(services|models|controllers)/" config` prints nothing
+- [ ] `grep -rnE "process\.env|#start/env" app providers 2>/dev/null` prints nothing (CFG-2)
+- [ ] `grep -rnE "from '#(services|models|controllers)/" config` prints nothing (CFG-4)
 - [ ] every key in `start/env.ts` is in `.env.example`
 
 Items:
@@ -140,7 +140,7 @@ Items:
 
 Mechanical checks:
 
-- [ ] `grep -rnE "from '#controllers/" start` prints nothing
+- [ ] `grep -rnE "from '#controllers/" start` prints nothing (RTE-2)
 - [ ] in `node ace list:routes`, every route with a controller has a name
 
 Items:
@@ -162,9 +162,9 @@ Items:
 
 Mechanical checks:
 
-- [ ] `grep -rnE "^\s*(private|protected) " app/controllers` prints nothing
-- [ ] `grep -rnE "\((ctx|context): HttpContext\)" app/controllers` prints nothing
-- [ ] `grep -rn "try {" app/controllers` prints nothing
+- [ ] `grep -rnE "^\s*(private|protected) " app/controllers` prints nothing (CTL-5)
+- [ ] `grep -rnE "\((ctx|context): HttpContext\)" app/controllers` prints nothing (CTL-4)
+- [ ] `grep -rn "try {" app/controllers` prints nothing (CTL-6)
 
 Items:
 
@@ -175,7 +175,7 @@ Items:
 - [ ] **CTL-5** (Law) A controller has no `private` or `protected` method. A step two actions share moves to a service or the model.
 - [ ] **CTL-6** (Law) A controller does not catch an exception to answer with an error, which is a status of 400 or above. The exception reaches the exception handler. A `catch` that recovers and goes on to the action's normal answer is not covered.
 - [ ] **CTL-7** (Rule) Return a value, or use the response helper that names the status: `response.created()`, `response.notFound()`, `response.forbidden()`. `response.send()` with no status set counts as a returned value. Do not set a status by number (`response.status(404)`).
-- [ ] **CTL-8** (Law) A class the container builds, such as a service, comes through the constructor with `@inject()`, or as an action argument with `@inject()` on the action. A container service is imported, not injected (IMP-6).
+- [ ] **CTL-8** (Law) A class the container builds, such as a service, comes through the constructor with `@inject()`, or as an action argument with `@inject()` on the action. A container service, which is an instance a `services` path exports, is imported, not injected (IMP-6). A class with no such export is injected.
 - [ ] **CTL-9** (Guideline) Business rules that a command, a listener or a second controller also needs live in a service, not in the action.
 - [ ] **CTL-10** (Guideline) Create a resource controller with `node ace make:controller <name> --resource` (or `--api`), and its validators with `node ace make:validator <name> --resource`.
 
@@ -185,8 +185,8 @@ Items:
 
 Mechanical checks:
 
-- [ ] `grep -rnE "request\.(all|body|qs|input|only|except)\(" app` prints nothing
-- [ ] `grep -rhoE "export const \w+" app/validators | sort | uniq -d` prints nothing
+- [ ] `grep -rnE "request\.(all|body|qs|input|only|except)\(" app` prints nothing (VAL-4)
+- [ ] `grep -rhoE "export const \w+" app/validators | sort | uniq -d` prints nothing (VAL-3)
 
 Items:
 
@@ -218,7 +218,7 @@ Items:
 
 Mechanical checks:
 
-- [ ] `grep -rnE "extends Error\b|throw new Error\(" app` prints nothing
+- [ ] `grep -rnE "extends Error\b|throw new Error\(" app` prints nothing (EXC-5, EXC-9)
 - [ ] `ls app/exceptions` shows only `handler.ts` and `*_exception.ts`
 
 Items:
@@ -290,7 +290,7 @@ Items:
 Mechanical checks:
 
 - [ ] `grep -rnE "^export (async )?function" app` prints only factories and pure functions (SVC-5)
-- [ ] `grep -rnE "^\s*console\." app providers start` prints nothing
+- [ ] `grep -rnE "^\s*console\." app providers start` prints nothing (SVC-8)
 
 Items:
 
@@ -346,7 +346,7 @@ Items:
 
 Mechanical checks:
 
-- [ ] `grep -rnE "^\s*console\." commands` prints nothing
+- [ ] `grep -rnE "^\s*console\." commands` prints nothing (CMD-5)
 
 Items:
 
@@ -365,9 +365,9 @@ Items:
 
 Mechanical checks:
 
-- [ ] `grep -rnE "^(let|var) " tests` prints nothing
-- [ ] `grep -rLE "\btest(\.group)?\(" tests --include='*.spec.ts'` prints nothing
-- [ ] `grep -rn "withGlobalTransaction" tests` prints nothing (deprecated name)
+- [ ] `grep -rnE "^(let|var) " tests` prints nothing (TST-12)
+- [ ] `grep -rLE "\btest(\.group)?\(" tests --include='*.spec.ts'` prints nothing (TST-11)
+- [ ] `grep -rn "withGlobalTransaction" tests` prints nothing: the name is deprecated (TST-4)
 
 Items:
 
@@ -465,7 +465,7 @@ Items:
 
 Mechanical checks:
 
-- [ ] `grep -rnE "process\.env|services/env" src providers services commands 2>/dev/null` prints nothing
+- [ ] `grep -rnE "process\.env|services/env" src providers services commands 2>/dev/null` prints nothing (PKG-23)
 
 Items:
 
@@ -492,7 +492,7 @@ Items:
 
 Mechanical checks:
 
-- [ ] `grep -rnE "extends Error\b|throw new Error\(|^\s*console\." src providers services commands 2>/dev/null` prints nothing
+- [ ] `grep -rnE "extends Error\b|throw new Error\(|^\s*console\." src providers services commands 2>/dev/null` prints nothing (PKG-31, PKG-34)
 
 Items:
 
