@@ -71,7 +71,8 @@ only when the request names it, by adding its folder to `include`.
 ### 2. Find the departures list
 
 Use the given path. Otherwise search the target repository's Markdown files for a heading that
-contains "departures". Record the path, relative to the target's repository root, or `null` when
+contains "departures". When several files have one, the list is the file whose heading is
+followed by numbered entries, not one that only links to it. Record the path, relative to the target's repository root, or `null` when
 there is none. With `null`, no finding carries a departure number.
 
 ### 3. Create the run folder and prepare it
@@ -96,8 +97,9 @@ there is none. With `null`, no finding carries a departure number.
 ```
 
 `folder` is the target relative to the root, `.` for the whole root. `diff` is the base, or
-`null`. `sections` is the slugs chosen, in checklist order; `all` is every slug
-`report list <kind>` prints.
+`null`. `sections` is the slugs chosen, in checklist order, or the string `"all"`: every section
+of the kind, without `applications/tests` when the scope is `code`. `report list <kind>` prints
+the slugs on standard output, one per line with a tab after each.
 
 Run `report prepare <run folder>`. It writes:
 
@@ -130,8 +132,8 @@ A reviewer does this:
    reason "no file in scope".
 2. Reads its checks file. Each printed line is a place to read; the item decides. It runs no
    check itself and records none.
-3. Reads every picked file in full, and gives each item one result: `pass`, `fail`, `n/a` or
-   `departure`. An item with several sentences passes only when every sentence holds. An item
+3. Reads every picked file in full, and gives each item one result: `pass`, `fail`, `n/a`,
+   `departure` or `unclear`. `unclear` is for an item with an unclear case and no finding. An item with several sentences passes only when every sentence holds. An item
    that passes although a check that names it printed lines needs a `reason`. A guideline about
    how a file was made, which the files do not show, is n/a with the reason "not decidable from
    the files".
@@ -178,7 +180,9 @@ A reviewer does this:
 - `read` of an unclear case lists the item ids `report item` printed as cited, `[]` when it
   printed none.
 - `sentence` is copied from the item. `code` is copied from the file; check it is there before
-  writing it. `observed` is one factual line, used only when the two quotes do not show the
+  writing it. Each quoted line may be a part of its line in the file, so indentation may be
+  left off. `line` is `null` when `code` is empty.
+- Write a place once: the script keeps one finding for the same sentence at the same line. `observed` is one factual line, used only when the two quotes do not show the
   failure on their own. Leave it empty otherwise.
 
 ### 5. Check the records
@@ -206,6 +210,9 @@ each entry the verifier:
    the reviewer's.
 
 The verifier adds no finding. There is no third pass.
+
+With many findings, use one verifier for each `section_file`, at the same time. No two verifiers
+write the same file.
 
 ### 7. Build and report
 

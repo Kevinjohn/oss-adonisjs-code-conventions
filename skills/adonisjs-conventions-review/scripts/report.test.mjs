@@ -201,3 +201,38 @@ test('item prints the cookbook entry and the items cited, and an unclear case mu
     run.clean();
   }
 });
+
+test('list prints slugs only, "all" leaves the tests section out of a code review', () => {
+  const listed = report('list', 'application');
+  assert.match(listed.stderr, /^Draft /);
+  assert.ok(listed.stdout.split('\n').filter(Boolean).every((line) => /^[a-z-]+\/[a-z-]+\t/.test(line)));
+  const run = scratch({ sections: 'all', scope: 'code' });
+  try {
+    assert.equal(report('prepare', run.runDir).status, 0);
+    assert.ok(existsSync(join(run.runDir, 'checks', 'applications--controllers.json')));
+    assert.ok(!existsSync(join(run.runDir, 'checks', 'applications--tests.json')));
+  } finally {
+    run.clean();
+  }
+});
+
+test('a repeated finding is counted once, and an unclear result needs an unclear case', () => {
+  const run = scratch();
+  try {
+    report('prepare', run.runDir);
+    const base = record();
+    writeRecord(run.runDir, { ...base, findings: [base.findings[0], { ...base.findings[0], line: 2 }] });
+    assert.equal(report('build', run.runDir).status, 0);
+    assert.equal(readOut(run.runDir, 'findings.json').findings.length, 1);
+    const items = base.items.map((entry) => (entry.item === 'CTL-7' ? { ...entry, result: 'unclear' } : entry));
+    writeRecord(run.runDir, { ...base, items });
+    const refused = report('build', run.runDir);
+    assert.equal(refused.status, 1);
+    assert.match(refused.stderr, /CTL-7: an unclear result needs an unclear case/);
+    const unclear = [{ item: 'CTL-7', path: CONTROLLER, question: 'Does a status set through a variable count?', read: [] }];
+    writeRecord(run.runDir, { ...base, items, unclear });
+    assert.equal(report('build', run.runDir).status, 0);
+  } finally {
+    run.clean();
+  }
+});

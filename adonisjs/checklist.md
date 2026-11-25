@@ -1,6 +1,6 @@
 # AdonisJS pre-PR checklist
 
-Draft 6, 2026-11-25. The working half of the [AdonisJS cookbook](./cookbook.md): every
+Draft 7, 2026-11-25. The working half of the [AdonisJS cookbook](./cookbook.md): every
 rule in it, as a check. The cookbook holds the reasons, the origin of each rule, the vocabulary
 table and the recipes. The rule id is the same in both; the tier and the wording that is checked
 are here.
@@ -48,7 +48,7 @@ Items:
 
 - [ ] **NAM-1** (Law) Files and folders are `snake_case`. The official ESLint preset enforces it with `@unicorn/filename-case`. A name a tool or a platform prescribes (`README.md`, `LICENSE`, a tool's configuration file) keeps its spelling. Documentation and asset files are not covered.
 - [ ] **NAM-2** (Law) Classes and types are PascalCase. Interfaces have no `I` prefix. Variables and functions are camelCase; constants may be UPPER_CASE. A variable that holds a class is PascalCase: `const { default: User } = await import('#models/user')`.
-- [ ] **NAM-3** (Law) A file that holds a class holds one class, and exports it as the generator does: a default export for a controller, model, middleware, exception, event, listener, mail, policy, transformer, provider, seeder and command; a named export for a service (`export class AvatarService`). Validators, factories, config helpers and errors are named exports. A package's `src/errors.ts` holds every exception class of the package (PKG-31).
+- [ ] **NAM-3** (Law) A file that holds a class holds one class, and exports it as the generator does: a default export for a controller, model, middleware, exception, event, listener, mail, policy, transformer, provider, seeder and command; a named export for a service (`export class AvatarService`). Validators, factories and config helpers are named exports. In a package, `src/errors.ts` holds every exception class as a named export (PKG-31).
 - [ ] **NAM-4** (Guideline) Create a file with its generator (`node ace make:*`), so the name, suffix and folder are the framework's.
 
 ## Imports and modules
@@ -123,7 +123,7 @@ Mechanical checks:
 Items:
 
 - [ ] **CFG-1** (Law) Every environment variable is declared and validated in `start/env.ts`. A secret uses `Env.schema.secret()`.
-- [ ] **CFG-2** (Law) Only `config/` files read the `env` service. Controllers, middleware, services and models read configuration, never `env` and never `process.env`.
+- [ ] **CFG-2** (Law) Only `config/` files read the `env` service. Controllers, middleware, services and models read configuration, never `env` and never `process.env`. Setting `process.env.NODE_ENV` in a `bin/` entry point, as the generated `bin/test.ts` does, is not reading it.
 - [ ] **CFG-3** (Law) Ask the application for its state with `app.inProduction`, `app.inDev` and `app.inTest`. Do not compare `NODE_ENV`.
 - [ ] **CFG-4** (Rule) A `config/` file imports `env`, framework helpers and the package's `defineConfig`, and default-exports the result. It does not import application code.
 - [ ] **CFG-5** (Law) A config file that defines a named list (mailers, hash drivers, limiter stores, guards) carries the `declare module` block that types it.
@@ -298,7 +298,7 @@ Items:
 - [ ] **SVC-2** (Law) The container builds a service: a controller or another service takes it through the constructor with `@inject()`, an Ace command through an `@inject()` `run` method, and code with no constructor to inject into through `app.container.make`. Nothing under `app/` calls `new` on a service.
 - [ ] **SVC-3** (Rule) A service does not read the HTTP context unless it is injected with it.
 - [ ] **SVC-4** (Rule) Replace a service in a test with the test context's `swap(Service, fake)`, which restores itself.
-- [ ] **SVC-5** (Law) Under `app/`, behaviour that has state, does I/O or takes a dependency is a class method. An exported function is a factory that builds and returns an instance, or a pure function, which takes every input as an argument, awaits nothing and reads no module-level variable.
+- [ ] **SVC-5** (Law) Under `app/`, behaviour that has state, does I/O or takes a dependency is a class method. An exported function is a factory that builds and returns an instance, or a pure function, which takes every input as an argument, awaits nothing and reads no module-level variable. A constant is not a variable (PKG-35).
 - [ ] **SVC-6** (Rule) Write a provider only for container bindings, framework extensions (macros, `HttpContext` properties), or work that starts and stops with the application. One-off setup is a preload file.
 - [ ] **SVC-7** (Law) In a provider: `register` only binds and is synchronous; `boot` configures. `register`, `boot` and `start` also run in console, test and tooling runs, and preload files are imported after `start`, so nothing there connects, listens or spawns. Long-running work starts in `ready` and stops in `shutdown`.
 - [ ] **SVC-8** (Law) Application code logs through the logger, not `console`.
@@ -351,7 +351,7 @@ Mechanical checks:
 Items:
 
 - [ ] **CMD-1** (Law) A command is a default-exported class in `commands/` that extends `BaseCommand` and sets `static commandName` and `static description`.
-- [ ] **CMD-2** (Law) A grouped command is named `namespace:action`.
+- [ ] **CMD-2** (Law) A grouped command is named `namespace:action`. The name has one colon, as every command of the framework has.
 - [ ] **CMD-3** (Law) A command that touches models or services sets `static options = { startApp: true }`.
 - [ ] **CMD-4** (Law) Inputs are declared with `@args` and `@flags`, each with a description.
 - [ ] **CMD-5** (Law) Output goes through `this.logger` and `this.ui`, not `console`.
