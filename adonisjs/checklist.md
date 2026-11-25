@@ -32,6 +32,12 @@ review runs are in [How to use these conventions](../workflow.md).
 
 *When:* Every change.
 
+Mechanical checks:
+
+- [ ] `check-terminology` (`scripts/check-terminology.mjs` in the conventions repository, run from the repository root) prints no rejected synonym
+
+Items:
+
 - [ ] **VOC-1** (Rule) Use the framework's word for a framework concept, in code, comments, commit messages, issues and documentation.
 - [ ] **VOC-2** (Law) Write "AdonisJS", never "Adonis", in prose. Package names keep their spelling: Lucid, VineJS, Japa, Tuyau, Ace, Edge, Bouncer, Shield.
 - [ ] **VOC-3** (Rule) A word in the [cookbook's vocabulary table](./cookbook.md#vocabulary) is not reused for anything else. Pick a different word for a product concept that happens to resemble one.

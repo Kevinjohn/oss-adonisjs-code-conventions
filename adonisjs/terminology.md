@@ -22,6 +22,27 @@ This page holds the rules that apply to every word, and the format a repository 
    mirror a platform or library keep American spelling (`color`, `normalize`, `serialize`,
    `initialize`, `authorization`). Write "AdonisJS", never "Adonis".
 
+## Enforced rejections
+
+`scripts/check-terminology.mjs` reads this table between its markers and fails on a rejected
+synonym in a file name or in the text of a tracked file. A repository's own dictionary carries the
+same table, between the same markers, for its product words; the check reads both. The words in
+the AdonisJS vocabulary that also have an ordinary meaning (guard, policy, exception, service,
+command) cannot be checked this way; a reviewer applies VOC-1 and VOC-3 to them.
+
+Run it from the repository to check: `node <path to this repository>/scripts/check-terminology.mjs`.
+A repository that wants the check in its own scripts installs this repository as a development
+dependency and runs `check-terminology`. Its `terminology.config.json` names its dictionary and its
+exemptions; the head of the script gives the format.
+
+<!-- terminology:enforced:start -->
+
+| Rejected | Say | Entry |
+| -------- | --- | ----- |
+| adonis | AdonisJS | VOC-2 |
+
+<!-- terminology:enforced:end -->
+
 ## Product words
 
 Each repository defines its own, in a file at its root, in these two tables. A rejected synonym is

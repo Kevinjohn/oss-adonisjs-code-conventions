@@ -1,0 +1,8 @@
+{
+  "allowedInFiles": [
+    { "path": "adonisjs/checklist.md", "terms": ["adonis"], "reason": "VOC-2 names the rejected word" },
+    { "path": "adonisjs/cookbook.md", "terms": ["adonis"], "reason": "VOC-2 names the rejected word" },
+    { "path": "adonisjs/terminology.md", "terms": ["adonis"], "reason": "the dictionary names the rejected word" },
+    { "path": "scripts/check-terminology.test.mjs", "terms": ["adonis"], "reason": "tests quote the rejected word" }
+  ]
+}
