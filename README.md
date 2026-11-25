@@ -33,6 +33,18 @@ ln -s "$(pwd)/skills/adonisjs-conventions-review" ~/.agents/skills/adonisjs-conv
 Then ask for it: "review `app/controllers` against the AdonisJS conventions, code only, sections
 applications/controllers and applications/validators".
 
+## The terminology check
+
+`scripts/check-terminology.mjs` fails on a rejected synonym in a file name or in the text of a
+tracked file. It reads the shared table in [adonisjs/terminology.md](./adonisjs/terminology.md)
+and, when the checked repository has one, the same table in that repository's own dictionary.
+
+```bash
+node /path/to/this/repository/scripts/check-terminology.mjs
+```
+
+Run it from the root of the repository to check. `npm test` here runs the check's own tests.
+
 ## What a repository keeps for itself
 
 - Its **departures list**: numbered, with entries marked **Aligning** for code that does not meet
