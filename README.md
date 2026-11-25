@@ -13,9 +13,9 @@ belongs to no product. A repository adopts it by linking here from its
 | | [house/single-responsibility.md](./house/single-responsibility.md) | One responsibility per file, and when to split. |
 | | [house/code-quality.md](./house/code-quality.md) | The defects to look for in any change. |
 | | [house/code-standards.md](./house/code-standards.md) | Names, errors, comments and TSDoc. |
-| | [house/terminology.md](./house/terminology.md) | One word per concept, and the format for a repository's own words. |
 | The AdonisJS way | [adonisjs/checklist.md](./adonisjs/checklist.md) | Every AdonisJS item as a check, with its tier. Draft 4. |
 | | [adonisjs/cookbook.md](./adonisjs/cookbook.md) | The reason, origin and recipe for each item. |
+| | [adonisjs/terminology.md](./adonisjs/terminology.md) | One word per concept, and the format for a repository's own words. |
 
 ## What a repository keeps for itself
 

@@ -3,7 +3,7 @@
 One word per concept, and one concept per word, in code, comments, tests, commit messages,
 documentation and the UI.
 
-The words the framework owns are the [AdonisJS vocabulary](../adonisjs/cookbook.md#vocabulary).
+The words the framework owns are the [AdonisJS vocabulary](./cookbook.md#vocabulary).
 This page holds the rules that apply to every word, and the format a repository uses for its own.
 
 ## Rules
