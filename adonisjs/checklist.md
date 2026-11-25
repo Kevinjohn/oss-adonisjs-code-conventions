@@ -1,6 +1,6 @@
 # AdonisJS pre-PR checklist
 
-Draft 5, 2026-11-25. The working half of the [AdonisJS cookbook](./cookbook.md): every
+Draft 6, 2026-11-25. The working half of the [AdonisJS cookbook](./cookbook.md): every
 rule in it, as a check. The cookbook holds the reasons, the origin of each rule, the vocabulary
 table and the recipes. The rule id is the same in both; the tier and the wording that is checked
 are here.
@@ -40,7 +40,7 @@ Items:
 
 - [ ] **VOC-1** (Rule) Use the framework's word for a framework concept, in code, comments, commit messages, issues and documentation. A framework word names the framework's operation only: `logout` ends the current session, and ending another session or a token is not a logout.
 - [ ] **VOC-2** (Law) Write "AdonisJS", never "Adonis", in prose. Package names keep their spelling: Lucid, VineJS, Japa, Tuyau, Ace, Edge, Bouncer, Shield. An identifier, a third-party name and a quotation of the rejected spelling keep theirs. A test title is prose.
-- [ ] **VOC-3** (Rule) A word in the [cookbook's vocabulary table](./cookbook.md#vocabulary) is not reused for anything else. Pick a different word for a product concept that happens to resemble one. The item covers a name the repository coins. The framework's own other uses of a word (a route group) and another library's term (a Prisma model) are not reuse. In a compound name the word counts only when it is the noun that names the thing.
+- [ ] **VOC-3** (Rule) A word in the [cookbook's vocabulary table](./cookbook.md#vocabulary) is not reused for anything else. Pick a different word for a product concept that happens to resemble one. The item covers a name the repository coins. The framework's own other uses of a word (a route group) and another library's term (a Prisma model, a TypeScript type guard) are not reuse. In a compound name the word counts only when it is the noun that names the thing.
 
 ## Names
 
@@ -406,7 +406,7 @@ Items:
 *When:* You added, moved or renamed a file.
 
 - [ ] **PKG-1** (Law) The implementation is in `src/`. At the repository root the only source files are `index.ts` and `configure.ts`; everything else there is configuration or one of the framework's folders (`providers/`, `services/`, `commands/`, `stubs/`, `factories/`, `modules/`, `bin/`, `tests/`).
-- [ ] **PKG-2** (Rule) Create only the folders the package needs. A package with no container binding has no `providers/` and no `services/`.
+- [ ] **PKG-2** (Rule) Create only the folders the package needs. A package with nothing to bind and nothing to register at boot has no `providers/`; one with no container service has no `services/`. A provider that only adds a macro or a boot hook is valid, as the VineJS provider of `@adonisjs/core` is.
 - [ ] **PKG-3** (Law) A static import is a relative path that ends in `.ts`; a lazy `import()` ends in `.js` (IMP-5).
 
 ## Name and manifest
@@ -469,7 +469,7 @@ Mechanical checks:
 
 Items:
 
-- [ ] **PKG-20** (Law) The application configures the package in `config/<name>.ts`, with the package's `defineConfig`. A helper for one feature may be used inside it, as `@adonisjs/auth` uses `sessionGuard`.
+- [ ] **PKG-20** (Law) When the package has settings, the application configures the package in `config/<name>.ts`, with the package's `defineConfig`. A helper for one feature may be used inside it, as `@adonisjs/auth` uses `sessionGuard`. A package with no settings has no `defineConfig`.
 - [ ] **PKG-21** (Law) `defineConfig` validates its input and throws `InvalidArgumentsException` or `RuntimeException` from `@adonisjs/core/exceptions`, with a message that names the package's config and the key.
 - [ ] **PKG-22** (Law) When configuration needs the booted application or a lazily imported driver, `defineConfig` returns a config provider (`configProvider.create`), and the service provider resolves it with `configProvider.resolve`.
 - [ ] **PKG-23** (Rule) The code a package ships (`src/`, `providers/`, `services/`, `commands/`) never reads `process.env` or the `env` service. The application's config file does. The repository's own `bin/` scripts are not shipped and may read `process.env`.
@@ -513,7 +513,7 @@ Items:
 
 *When:* You touched the provider, the configure hook, the export map or a test, or are releasing.
 
-- [ ] **PKG-39** (Law) Tests run on Japa through `bin/test.ts`, in `tests/**/*.spec.ts`. Shared test code is in `tests/helpers.ts`, or in files under `tests/helpers/`.
+- [ ] **PKG-39** (Law) Tests run on Japa through `bin/test.ts`, in `tests/**/*.spec.ts`. Shared test code is in `tests/helpers.ts`, or in files under `tests/helpers/`. Shared means used by more than one spec file. Tests of repository tooling that is not shipped are not covered.
 - [ ] **PKG-40** (Law) The configure hook has a test (`tests/configure.spec.ts`) that runs it against a scratch application with `@japa/file-system` and asserts the files it wrote.
 - [ ] **PKG-41** (Law) The provider has a test that boots an application with it and resolves the binding.
 - [ ] **PKG-42** (Guideline) Public types are tested with `@japa/expect-type` where inference matters.

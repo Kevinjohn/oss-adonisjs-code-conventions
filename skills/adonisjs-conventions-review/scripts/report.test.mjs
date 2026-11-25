@@ -82,6 +82,7 @@ test('build corrects the line, asks for verification and then counts a verified 
     assert.match(report('build', run.runDir).stdout, /0 not verified/);
     assert.equal(existsSync(join(run.runDir, 'verify.json')), false);
     assert.equal(readOut(run.runDir, 'findings.json').findings[0].line, 2);
+    assert.match(readOut(run.runDir, 'findings.json').findings[0].key, /^CTL-4:[0-9a-f]{8}$/);
   } finally {
     run.clean();
   }
@@ -104,6 +105,12 @@ test('build refuses records that break a rule of the review', () => {
     refused(record({ findings: [] }), /CTL-4: a fail needs at least one finding/);
     refused(record({ findings: [{ ...finding, sentence: 'made up' }] }), /not a quote from the item/);
     refused(record({ findings: [{ ...finding, code: 'not there' }] }), /is not in the file/);
+    refused(
+      record({ findings: [{ ...finding, code: `${finding.code}\n    return nothing` }] }),
+      /is not in the file/
+    );
+    refused(record({ files_read: [] }), /"files_read" is empty/);
+    refused(record({ files_read: ['other.ts'] }), /the file is not in "files_read"/);
     refused(
       record({ findings: [{ ...finding, path: 'examples/app/controllers/demo_controller.ts' }] }),
       /not in files\.json/
@@ -142,6 +149,7 @@ test('with a diff, only changed files are in scope and a finding must be on a ch
     assert.match(report('build', run.runDir).stderr, /not in files\.json/);
     const changed = record();
     changed.findings[0].path = tags;
+    changed.files_read = [tags];
     writeRecord(run.runDir, changed);
     assert.equal(report('build', run.runDir).status, 0);
   } finally {

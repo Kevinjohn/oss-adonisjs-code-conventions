@@ -1,6 +1,6 @@
 # AdonisJS cookbook
 
-Draft 5, 2026-11-25. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
+Draft 6, 2026-11-25. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
 and Tuyau 1.
 
 This is the coding guidebook for every AdonisJS repository we own: applications, and the
@@ -56,7 +56,7 @@ marked.
 - **VOC-2 (H)** Write "AdonisJS", never "Adonis", in prose. Package names keep their spelling:
   Lucid, VineJS, Japa, Tuyau, Ace, Edge, Bouncer, Shield. An identifier, a third-party name and a quotation of the rejected spelling keep theirs. A test title is prose.
 - **VOC-3 (H)** A word in the table below is not reused for anything else. Pick a different word
-  for a product concept that happens to resemble one. The item covers a name the repository coins. The framework's own other uses of a word (a route group) and another library's term (a Prisma model) are not reuse. In a compound name the word counts only when it is the noun that names the thing.
+  for a product concept that happens to resemble one. The item covers a name the repository coins. The framework's own other uses of a word (a route group) and another library's term (a Prisma model, a TypeScript type guard) are not reuse. In a compound name the word counts only when it is the noun that names the thing.
 
 | Term | Meaning |
 | --- | --- |
@@ -940,8 +940,7 @@ index.ts           the entry point
 ```
 
 - **PKG-1 (F)** The implementation is in `src/`. At the repository root the only source files are `index.ts` and `configure.ts`; everything else there is configuration or one of the framework's folders (`providers/`, `services/`, `commands/`, `stubs/`, `factories/`, `modules/`, `bin/`, `tests/`).
-- **PKG-2 (F)** Create only the folders the package needs. A package with no container binding has
-  no `providers/` and no `services/`.
+- **PKG-2 (F)** Create only the folders the package needs. A package with nothing to bind and nothing to register at boot has no `providers/`; one with no container service has no `services/`. A provider that only adds a macro or a boot hook is valid, as the VineJS provider of `@adonisjs/core` is.
 - **PKG-3 (F)** A static import is a relative path that ends in `.ts`; a lazy `import()` ends in
   `.js` (IMP-5).
 
@@ -1050,8 +1049,8 @@ export async function configure(command: Configure) {
 
 ## Configuration
 
-- **PKG-20 (F)** The application configures the package in `config/<name>.ts`, with the package's
-  `defineConfig`. A helper for one feature may be used inside it, as `@adonisjs/auth` uses `sessionGuard`.
+- **PKG-20 (F)** When the package has settings, the application configures the package in `config/<name>.ts`, with the package's
+  `defineConfig`. A helper for one feature may be used inside it, as `@adonisjs/auth` uses `sessionGuard`. A package with no settings has no `defineConfig`.
 - **PKG-21 (F)** `defineConfig` validates its input and throws `InvalidArgumentsException` or
   `RuntimeException` from `@adonisjs/core/exceptions`, with a message that names the package's
   config and the key.
@@ -1251,7 +1250,7 @@ it.
 
 ## Tests and release
 
-- **PKG-39 (F)** Tests run on Japa through `bin/test.ts`, in `tests/**/*.spec.ts`. Shared test code is in `tests/helpers.ts`, or in files under `tests/helpers/`.
+- **PKG-39 (F)** Tests run on Japa through `bin/test.ts`, in `tests/**/*.spec.ts`. Shared test code is in `tests/helpers.ts`, or in files under `tests/helpers/`. Shared means used by more than one spec file. Tests of repository tooling that is not shipped are not covered.
 - **PKG-40 (F)** The configure hook has a test (`tests/configure.spec.ts`) that runs it against a
   scratch application with `@japa/file-system` and asserts the files it wrote.
 - **PKG-41 (F)** The provider has a test that boots an application with it and resolves the

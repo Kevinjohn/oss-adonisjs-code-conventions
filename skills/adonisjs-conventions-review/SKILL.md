@@ -62,7 +62,7 @@ only when the request names it, by adding its folder to `include`.
 ### 1. Fix the root and the kind
 
 - An application root is a folder with `adonisrc.ts`. A package root is a folder with
-  `configure.ts` beside `package.json` and no `adonisrc.ts`.
+  `package.json` and no `adonisrc.ts`; it need not have a `configure.ts`.
 - The root is the target, or the nearest folder above it that is one of these. When the target
   holds several roots, do one complete run for each.
 - The kind is `application` or `package`. `report list <kind>` prints the sections that apply.
@@ -211,7 +211,7 @@ The verifier adds no finding. There is no third pass.
 
 Run `report build <run folder>`, with `--previous <findings.json>` when one was given. It writes:
 
-- `findings.json`: every finding with a stable `key`, its tier and the cookbook item that shows
+- `findings.json`: every finding with a `key` that survives a file rename, its tier and the cookbook item that shows
   the pattern to follow; the findings the second pass rejected; the findings resolved since the
   previous run; and the result of every item and every check.
 - `report.md`: the same as tables. Findings by tier, then the coverage of every item.

@@ -39,6 +39,8 @@ const EXCLUDED_FOLDERS = new Set([
   '.conventions-review',
 ]);
 const EXAMPLE_FILE = /\.example\.[cm]?[jt]sx?$/;
+// Counts findings with the same item and quote, so each gets a key of its own.
+const keysSeen = new Map();
 const TEST_FILE = /(?:^|\/)tests?\/|\.(?:spec|test)\.[cm]?[jt]sx?$/;
 // A check is run only when it is one read-only command the script knows.
 const RUNNABLE = /^(?:grep|ls|check-terminology)\b/;
@@ -97,6 +99,17 @@ function parseChecklist() {
     else if (line.startsWith('- [ ] ')) section.checks.push(parseCheck(line.slice(6)));
   }
   return { draft, sections };
+}
+
+/**
+ * A key that survives a file rename: the item and a digest of the quote. A second finding with
+ * the same quote gets a counter.
+ */
+function keyOf(itemId, digest) {
+  const base = `${itemId}:${digest.slice(0, 8)}`;
+  const count = (keysSeen.get(base) ?? 0) + 1;
+  keysSeen.set(base, count);
+  return count === 1 ? base : `${base}:${count}`;
 }
 
 /** The cookbook's entry for an item: its text up to the next entry, blank line or heading. */
@@ -256,10 +269,14 @@ function prepare(runDir) {
  * reviewer gave. Returns null when the first line of the quote is not in the file.
  */
 function locate(fileText, code, line) {
-  const first = squash(code.split('\n').find((part) => squash(part)) ?? '');
+  const quoted = code.split('\n').map(squash).filter(Boolean);
+  const lines = fileText
+    .split('\n')
+    .map((text, index) => ({ text: squash(text), number: index + 1 }))
+    .filter((entry) => entry.text);
   const hits = [];
-  fileText.split('\n').forEach((text, index) => {
-    if (squash(text).includes(first)) hits.push(index + 1);
+  lines.forEach((entry, at) => {
+    if (quoted.every((part, offset) => lines[at + offset]?.text.includes(part))) hits.push(entry.number);
   });
   if (hits.length === 0) return null;
   const wanted = Number.isInteger(line) ? line : hits[0];
@@ -293,6 +310,10 @@ function build(runDir, previousPath) {
     if (record.checks) say('"checks" is not yours to write: the script records the checks');
     const results = new Map((record.items ?? []).map((entry) => [entry.item, entry]));
     const live = new Map();
+    const read = new Set(record.files_read ?? []);
+    if (read.size === 0 && (record.items ?? []).some((entry) => entry.result !== 'n/a')) {
+      say('"files_read" is empty although an item has a result other than n/a');
+    }
 
     for (const entry of record.unclear ?? []) {
       const item = section.items.find((candidate) => candidate.id === entry.item);
@@ -321,6 +342,7 @@ function build(runDir, previousPath) {
       }
       const where = `${finding.item} at ${finding.path}`;
       if (!finding.path) say(`${finding.item}: finding has no path`);
+      else if (!read.has(finding.path)) say(`${where}: the file is not in "files_read"`);
       if (!squash(finding.sentence) || !squash(item.text).includes(squash(finding.sentence))) {
         say(`${where}: "sentence" is not a quote from the item`);
       }
@@ -349,7 +371,7 @@ function build(runDir, previousPath) {
         .update(squash(finding.code) || squash(finding.observed))
         .digest('hex');
       const entry = {
-        key: `${item.id}:${finding.path}:${digest.slice(0, 8)}`,
+        key: keyOf(item.id, digest),
         item: item.id,
         tier: item.tier.toLowerCase(),
         section: slug,
