@@ -39,6 +39,8 @@ const EXCLUDED_FOLDERS = new Set([
   '.conventions-review',
 ]);
 const EXAMPLE_FILE = /\.example\.[cm]?[jt]sx?$/;
+// Prose is not code: Markdown and HTML are not reviewed, except the root README (PKG-45).
+const PROSE_FILE = /\.(?:mdx?|html?)$/i;
 // Counts findings with the same item and quote, so each gets a key of its own.
 const keysSeen = new Map();
 const TEST_FILE = /(?:^|\/)tests?\/|\.(?:spec|test)\.[cm]?[jt]sx?$/;
@@ -183,7 +185,11 @@ const git = (root, args) =>
 function isExcluded(path, include) {
   if (include.some((entry) => path.startsWith(entry))) return false;
   const folders = path.split('/').slice(0, -1);
-  return folders.some((folder) => EXCLUDED_FOLDERS.has(folder)) || EXAMPLE_FILE.test(path);
+  return (
+    folders.some((folder) => EXCLUDED_FOLDERS.has(folder)) ||
+    EXAMPLE_FILE.test(path) ||
+    (PROSE_FILE.test(path) && path !== 'README.md')
+  );
 }
 
 /** The lines a diff adds or changes, as `[first, last]` ranges for each file. */
@@ -268,7 +274,7 @@ function prepare(runDir) {
     writeFileSync(join(runDir, 'checks', fileOf(slug)), `${JSON.stringify(results, null, 2)}\n`);
   }
   console.log(
-    `${scope.files.length} file(s) in scope, ${scope.excluded} left out as example or output. ` +
+    `${scope.files.length} file(s) in scope, ${scope.excluded} left out by default. ` +
       `Wrote ${join(runDir, 'files.json')} and ${run.sections.length} check file(s).`
   );
 }
@@ -542,7 +548,7 @@ function renderReport({ checklist, run, summary, findings, resolved, coverage })
     `- Root: \`${run.root}\`${run.commit ? ` at \`${run.commit}\`` : ''}`,
     `- Folder: \`${run.folder ?? '.'}\`, scope: ${run.scope}, kind: ${run.kind}`,
     `- Reviewed: ${run.diff ? `the lines changed against \`${run.diff}\`` : 'every tracked file'}, ` +
-      `${summary.files_in_scope} file(s); ${summary.files_left_out} left out as example or output`,
+      `${summary.files_in_scope} file(s); ${summary.files_left_out} left out by default`,
     `- Departures list: ${run.departures ? `\`${run.departures}\`` : 'none read'}`,
     `- Reviewer model: ${run.model ?? 'not stated'}`,
     `- Findings: ${summary.laws} law, ${summary.rules} rule, ${summary.guidelines} guideline; ` +

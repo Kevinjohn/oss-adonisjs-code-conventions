@@ -23,6 +23,8 @@ function scratch(run = {}) {
   write(CONTROLLER, 'export default class PostsController {\n  async store(ctx: HttpContext) {\n    return ctx\n  }\n}\n');
   write('examples/app/controllers/demo_controller.ts', '  async store(ctx: HttpContext) {}\n');
   write('build/app/controllers/built_controller.ts', '  async store(ctx: HttpContext) {}\n');
+  write('user-stories/sign_in.md', 'async store(ctx: HttpContext) {\n');
+  write('public/index.html', '<p>async store(ctx: HttpContext) {</p>\n');
   const git = (...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.com', ...args], { cwd: root });
   git('init', '-q');
   git('add', '-A');
@@ -52,7 +54,7 @@ test('prepare leaves example and output folders out, and takes them back by name
   const run = scratch();
   try {
     assert.equal(report('prepare', run.runDir).status, 0);
-    assert.deepEqual(readOut(run.runDir, 'files.json'), { files: [CONTROLLER], excluded: 2, changed: null });
+    assert.deepEqual(readOut(run.runDir, 'files.json'), { files: [CONTROLLER], excluded: 4, changed: null });
     const [, check] = readOut(run.runDir, 'checks/applications--controllers.json');
     assert.deepEqual(check.items, ['CTL-4']);
     assert.equal(check.result, 'output');
