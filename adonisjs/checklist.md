@@ -167,8 +167,8 @@ Items:
 - [ ] **CTL-3** (Rule) An operation that is not one of those becomes its own controller: a noun controller with a resourceful action (the kit: sign-up is `NewAccountController.store`, login and logout are `AccessTokensController.store` and `.destroy`), or a single action controller with one `handle` method, made with `node ace make:controller <name> handle --singular` (the documentation). Do not grow a controller into a list of verbs.
 - [ ] **CTL-4** (Law) An action destructures what it uses from the HTTP context: `async store({ request, serialize }: HttpContext)`.
 - [ ] **CTL-5** (Law) A controller has no `private` or `protected` method. A step two actions share moves to a service or the model.
-- [ ] **CTL-6** (Law) A controller does not wrap its work in `try`/`catch` to build an error response. It lets the exception reach the exception handler.
-- [ ] **CTL-7** (Rule) Return a value, or use the response helper that names the status: `response.created()`, `response.notFound()`, `response.forbidden()`.
+- [ ] **CTL-6** (Law) A controller does not catch an exception to answer with an error, which is a status of 400 or above. The exception reaches the exception handler. A `catch` that recovers and goes on to the action's normal answer is not covered.
+- [ ] **CTL-7** (Rule) Return a value, or use the response helper that names the status: `response.created()`, `response.notFound()`, `response.forbidden()`. `response.send()` with no status set counts as a returned value. Do not set a status by number (`response.status(404)`).
 - [ ] **CTL-8** (Law) A class the container builds, such as a service, comes through the constructor with `@inject()`, or as an action argument with `@inject()` on the action. A container service is imported, not injected (IMP-6).
 - [ ] **CTL-9** (Guideline) Business rules that a command, a listener or a second controller also needs live in a service, not in the action.
 - [ ] **CTL-10** (Guideline) Create a resource controller with `node ace make:controller <name> --resource` (or `--api`), and its validators with `node ace make:validator <name> --resource`.
