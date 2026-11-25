@@ -4,6 +4,7 @@
  *
  *   report.mjs list [application|package]   sections that apply, one per line
  *   report.mjs section <slug>               the section's text, as the checklist has it
+ *   report.mjs item <id>                    an item, its cookbook entry and the items they cite
  *   report.mjs prepare <run-dir>            lists the files in scope and runs the mechanical checks
  *   report.mjs build <run-dir> [--previous <findings.json>]
  *
@@ -20,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 
 const REPOSITORY = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const CHECKLIST_PATH = join(REPOSITORY, 'adonisjs/checklist.md');
+const COOKBOOK_PATH = join(REPOSITORY, 'adonisjs/cookbook.md');
 const TERMINOLOGY_CHECK = join(REPOSITORY, 'scripts/check-terminology.mjs');
 const PART_KINDS = { 1: ['application', 'package'], 2: ['application'], 3: ['package'] };
 const RESULTS = ['pass', 'fail', 'n/a', 'departure'];
@@ -95,6 +97,24 @@ function parseChecklist() {
     else if (line.startsWith('- [ ] ')) section.checks.push(parseCheck(line.slice(6)));
   }
   return { draft, sections };
+}
+
+/** The cookbook's entry for an item: its text up to the next entry, blank line or heading. */
+function cookbookEntry(id) {
+  const lines = readFileSync(COOKBOOK_PATH, 'utf8').split('\n');
+  const start = lines.findIndex((line) => new RegExp(`^(?:- )?\\*\\*${id} \\(`).test(line));
+  if (start === -1) return '';
+  let end = start + 1;
+  while (end < lines.length && lines[end] !== '' && !/^(?:- |#)/.test(lines[end])) end += 1;
+  return squash(lines.slice(start, end).join(' '));
+}
+
+/** The other items an item's text and cookbook entry cite, in checklist order. */
+function citedBy(item, sections) {
+  const text = `${item.text} ${cookbookEntry(item.id)}`;
+  return sections
+    .flatMap((section) => section.items)
+    .filter((other) => other.id !== item.id && new RegExp(`\\b${other.id}\\b`).test(text));
 }
 
 /** Split a check line into its command, what it expects and the items it supports. */
@@ -273,6 +293,25 @@ function build(runDir, previousPath) {
     if (record.checks) say('"checks" is not yours to write: the script records the checks');
     const results = new Map((record.items ?? []).map((entry) => [entry.item, entry]));
     const live = new Map();
+
+    for (const entry of record.unclear ?? []) {
+      const item = section.items.find((candidate) => candidate.id === entry.item);
+      if (!item) {
+        say(`unclear names ${entry.item}, which is not an item of this section`);
+        continue;
+      }
+      if (!squash(entry.question).endsWith('?')) {
+        say(`${entry.item}: an unclear case is one question, ending in "?", with no answer proposed`);
+      }
+      const missing = citedBy(item, sections).filter((cited) => !(entry.read ?? []).includes(cited.id));
+      if (!Array.isArray(entry.read) || missing.length > 0) {
+        say(
+          `${entry.item}: "read" must list the items read before asking` +
+            (missing.length > 0 ? `; it cites ${missing.map((cited) => cited.id).join(', ')}` : '') +
+            `. Run "item ${entry.item}" to read them`
+        );
+      }
+    }
 
     for (const finding of record.findings ?? []) {
       const item = section.items.find((candidate) => candidate.id === finding.item);
@@ -542,6 +581,14 @@ if (command === 'list') {
   const section = parseChecklist().sections.find((candidate) => candidate.slug === args[0]);
   if (!section) fail([`No section "${args[0]}". Run "list" for the slugs.`]);
   console.log(section.text.join('\n').trim());
+} else if (command === 'item' && args[0]) {
+  const { sections } = parseChecklist();
+  const item = sections.flatMap((section) => section.items).find((candidate) => candidate.id === args[0]);
+  if (!item) fail([`No item "${args[0]}".`]);
+  console.log(`${item.id} (${item.tier}) ${item.text}\n\nCookbook: ${cookbookEntry(item.id) || 'no entry'}`);
+  for (const cited of citedBy(item, sections)) {
+    console.log(`\nCited: ${cited.id} (${cited.tier}) ${cited.text}`);
+  }
 } else if (command === 'prepare' && args[0]) {
   prepare(resolve(args[0]));
 } else if (command === 'build' && args[0]) {
@@ -549,6 +596,6 @@ if (command === 'list') {
   build(resolve(args[0]), flag === -1 ? null : args[flag + 1]);
 } else {
   fail([
-    'Usage: report.mjs list [application|package] | section <slug> | prepare <run-dir> | build <run-dir> [--previous <findings.json>]',
+    'Usage: report.mjs list [application|package] | section <slug> | item <id> | prepare <run-dir> | build <run-dir> [--previous <findings.json>]',
   ]);
 }
