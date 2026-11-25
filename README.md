@@ -17,6 +17,22 @@ belongs to no product. A repository adopts it by linking here from its
 | | [adonisjs/cookbook.md](./adonisjs/cookbook.md) | The reason, origin and recipe for each item. |
 | | [adonisjs/terminology.md](./adonisjs/terminology.md) | One word per concept, and the format for a repository's own words. |
 
+## The review skill
+
+[skills/adonisjs-conventions-review](./skills/adonisjs-conventions-review/SKILL.md) reviews a
+repository, or a folder in one, against the AdonisJS checklist and writes the findings as
+`findings.json` and `report.md`. It is read-only: it reports, and does not fix.
+
+Install it by linking the folder into the skills folder your agent reads, from a checkout of this
+repository. The skill reads the checklist from that checkout, so `git pull` updates both.
+
+```bash
+ln -s "$(pwd)/skills/adonisjs-conventions-review" ~/.agents/skills/adonisjs-conventions-review
+```
+
+Then ask for it: "review `app/controllers` against the AdonisJS conventions, code only, sections
+applications/controllers and applications/validators".
+
 ## What a repository keeps for itself
 
 - Its **departures list**: numbered, with entries marked **Aligning** for code that does not meet
