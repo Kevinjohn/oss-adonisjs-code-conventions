@@ -13,7 +13,8 @@ The checklist and its procedure are in the repository this skill belongs to. Fin
 `realpath` on this skill's folder: the repository root is two folders up. From there:
 
 - `adonisjs/checklist.md`: the items. Never work from a copy or from memory.
-- `workflow.md`: the tiers, when n/a is valid, departures. Read it before the first review.
+- `workflow.md`: the tiers, when n/a is valid, how to read an item, departures. Read it before the
+  first review.
 - `skills/adonisjs-conventions-review/scripts/report.mjs`: called `report` below. Run it with `node`.
 
 The script lists the files, runs the mechanical checks and writes every output file. A reviewer
@@ -50,8 +51,10 @@ only when the request names it, by adding its folder to `include`.
 - A guideline gets at most one finding per item.
 - A finding a numbered departure or an Aligning entry covers is still recorded, with that
   entry's number.
-- Do not guess. When the item's wording does not decide a case, it is not a finding: record it
-  under `unclear` with the question the wording leaves open. That list is how the checklist
+- Do not guess. When the item's wording does not decide a case, first run `report item <id>`: it
+  prints the item, its cookbook entry and the items they cite, and one of those often decides
+  it. When none does, it is not a finding: record it under `unclear` as one question, with the
+  ids read in `read`. Propose no answer and no looser reading. That list is how the checklist
   gets better.
 
 ## Steps
@@ -113,7 +116,7 @@ do them yourself.
 A reviewer is given, and needs nothing else:
 
 - The section text from `report section <slug>`, verbatim.
-- The n/a rule and the tier table from `workflow.md`, verbatim.
+- The tier table, the n/a rule and the section "How to read an item" from `workflow.md`, verbatim.
 - The root, the paths of `files.json` and of its section's file under `checks/`, and the path of
   the departures list.
 - The "Rules" above and the record format below.
@@ -164,13 +167,16 @@ A reviewer does this:
     {
       "item": "CTL-7",
       "path": "app/controllers/exports_controller.ts",
-      "question": "Does a status set through a variable count as a status set by number?"
+      "question": "Does a status set through a variable count as a status set by number?",
+      "read": []
     }
   ]
 }
 ```
 
 - `items` has every item of the section, once. `n/a` needs a `reason`.
+- `read` of an unclear case lists the item ids `report item` printed as cited, `[]` when it
+  printed none.
 - `sentence` is copied from the item. `code` is copied from the file; check it is there before
   writing it. `observed` is one factual line, used only when the two quotes do not show the
   failure on their own. Leave it empty otherwise.
@@ -179,8 +185,8 @@ A reviewer does this:
 
 Run `report build <run folder>`. It rejects, among others: an item with no result, a fail with
 no finding, a sentence that is not in the item, a code quote that is not in the file, a file
-that is not in `files.json`, a line the diff did not change, and a second finding on a
-guideline. Send each rejected record back to its reviewer once. A record that is still rejected
+that is not in `files.json`, a line the diff did not change, a second finding on a
+guideline, and an unclear case that proposes an answer or has not read the items cited. Send each rejected record back to its reviewer once. A record that is still rejected
 is corrected by you from the file.
 
 ### 6. Second pass: verify
@@ -220,8 +226,8 @@ not verified, and the count of files left out. Say which sections had no file in
 
 Not part of this skill; each needs its own request.
 
-- `unclear.md` filed as an issue in the conventions repository, and the wording settled there
-  before any code changes.
+- `unclear.md` filed as an issue in the conventions repository, and each question settled there
+  as `workflow.md` says under "Settling an unclear case", before any code changes.
 - One issue per failed item, holding the item text, the cookbook item and every location from
   `findings.json`.
 - The fix, by a stronger model than the reviewers.

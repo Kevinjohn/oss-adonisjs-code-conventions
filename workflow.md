@@ -34,6 +34,36 @@ Each item carries the tier that says what a failure does.
 - A tier or an item changes through an issue, between reviews. A review in progress keeps the
   draft it started with.
 
+## How to read an item
+
+These hold for a reviewer, a verifier and whoever fixes a finding.
+
+- Text after "such as", and an example that follows a colon, is an illustration. Everything else
+  in an item is exact.
+- An item covers what the repository writes and ships. It does not cover a name a tool
+  prescribes, a generated file, tooling that is not shipped or another library's term.
+- An item that lists things allows more of them unless it says "only".
+- Passing something through is not doing it: an exception that propagates unchanged is not thrown
+  by the code it passes through.
+- What the framework or an official package does itself always passes.
+- An item that cites another (`IMP-6`) is read with it. So is its entry in the cookbook.
+- Where the words still do not decide a case, it is not a finding. Record the question, with the
+  items read, and go on. Do not propose an answer and do not pick the looser reading.
+
+## Settling an unclear case
+
+A question a review recorded is settled between reviews, by one of three answers and no other.
+
+| Answer | When | What changes |
+| --- | --- | --- |
+| **Already answered** | Another item, or the cookbook entry, decides the case. | Nothing. Cite the item. |
+| **Wording gap** | The framework documentation or an official package decides the case and the item does not say so. | One sentence is added to the item and its cookbook entry, and the draft number goes up. Name the source in the change. |
+| **The code differs** | The item decides the case and the code does not meet it. | Nothing here. The reviewed repository records a departure or an **Aligning** entry. |
+
+- Evidence from the reviewed repository never changes an item or its tier.
+- A looser item needs the framework or an official package doing the looser thing.
+- Settle every question of a review in one change.
+
 ## How to review with it
 
 1. State the scope first: the lines a pull request changes, or the folders of a repository review.

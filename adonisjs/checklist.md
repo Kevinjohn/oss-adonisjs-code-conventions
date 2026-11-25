@@ -1,6 +1,6 @@
 # AdonisJS pre-PR checklist
 
-Draft 4, 2026-11-25. The working half of the [AdonisJS cookbook](./cookbook.md): every
+Draft 5, 2026-11-25. The working half of the [AdonisJS cookbook](./cookbook.md): every
 rule in it, as a check. The cookbook holds the reasons, the origin of each rule, the vocabulary
 table and the recipes. The rule id is the same in both; the tier and the wording that is checked
 are here.
@@ -38,16 +38,16 @@ Mechanical checks:
 
 Items:
 
-- [ ] **VOC-1** (Rule) Use the framework's word for a framework concept, in code, comments, commit messages, issues and documentation.
-- [ ] **VOC-2** (Law) Write "AdonisJS", never "Adonis", in prose. Package names keep their spelling: Lucid, VineJS, Japa, Tuyau, Ace, Edge, Bouncer, Shield.
-- [ ] **VOC-3** (Rule) A word in the [cookbook's vocabulary table](./cookbook.md#vocabulary) is not reused for anything else. Pick a different word for a product concept that happens to resemble one.
+- [ ] **VOC-1** (Rule) Use the framework's word for a framework concept, in code, comments, commit messages, issues and documentation. A framework word names the framework's operation only: `logout` ends the current session, and ending another session or a token is not a logout.
+- [ ] **VOC-2** (Law) Write "AdonisJS", never "Adonis", in prose. Package names keep their spelling: Lucid, VineJS, Japa, Tuyau, Ace, Edge, Bouncer, Shield. An identifier, a third-party name and a quotation of the rejected spelling keep theirs. A test title is prose.
+- [ ] **VOC-3** (Rule) A word in the [cookbook's vocabulary table](./cookbook.md#vocabulary) is not reused for anything else. Pick a different word for a product concept that happens to resemble one. The item covers a name the repository coins. The framework's own other uses of a word (a route group) and another library's term (a Prisma model) are not reuse. In a compound name the word counts only when it is the noun that names the thing.
 
 ## Names
 
 *When:* Every change.
 
-- [ ] **NAM-1** (Law) Files and folders are `snake_case`. The official ESLint preset enforces it with `@unicorn/filename-case`.
-- [ ] **NAM-2** (Law) Classes and types are PascalCase. Interfaces have no `I` prefix. Variables and functions are camelCase; constants may be UPPER_CASE.
+- [ ] **NAM-1** (Law) Files and folders are `snake_case`. The official ESLint preset enforces it with `@unicorn/filename-case`. A name a tool or a platform prescribes (`README.md`, `LICENSE`, a tool's configuration file) keeps its spelling. Documentation and asset files are not covered.
+- [ ] **NAM-2** (Law) Classes and types are PascalCase. Interfaces have no `I` prefix. Variables and functions are camelCase; constants may be UPPER_CASE. A variable that holds a class is PascalCase: `const { default: User } = await import('#models/user')`.
 - [ ] **NAM-3** (Law) A file that holds a class holds one class, and exports it as the generator does: a default export for a controller, model, middleware, exception, event, listener, mail, policy, transformer, provider, seeder and command; a named export for a service (`export class AvatarService`). Validators, factories, config helpers and errors are named exports. A package's `src/errors.ts` holds every exception class of the package (PKG-31).
 - [ ] **NAM-4** (Guideline) Create a file with its generator (`node ace make:*`), so the name, suffix and folder are the framework's.
 
@@ -65,7 +65,7 @@ Items:
 - [ ] **IMP-2** (Law) Import a type with `import type`, or the inline form `import { type X }`.
 - [ ] **IMP-3** (Law) Use the `node:` prefix for Node built-ins.
 - [ ] **IMP-4** (Law) In an application, import across folders through the `#` subpath aliases declared under `imports` in `package.json`. Do not write relative imports.
-- [ ] **IMP-5** (Law) In a package, a static import is a relative path that ends in `.ts`; a lazy `import()` of a built module ends in `.js`. Packages declare no `#` aliases, as the official packages do not.
+- [ ] **IMP-5** (Law) In a package, a static import is a relative path that ends in `.ts`; a lazy `import()` of a built module ends in `.js`. Packages declare no `#` aliases, as the official packages do not. A re-export (`export … from`) is a static import.
 - [ ] **IMP-6** (Rule) Import a container service from its `services` path. Do not construct what a package already provides.
 
 ## Lint, format and TypeScript
@@ -82,10 +82,10 @@ Items:
 - [ ] **TOOL-2** (Rule) Prettier starts from `@adonisjs/prettier-config`: single quotes, 100 columns, ES5 trailing commas, `arrowParens: always`, `quoteProps: consistent`, no semicolons.
 - [ ] **TOOL-3** (Law) `tsconfig.json` extends `@adonisjs/tsconfig/tsconfig.app.json` in an application and `@adonisjs/tsconfig/tsconfig.package.json` in a package.
 - [ ] **TOOL-4** (Law) Node is version 24 or later, declared under `engines`. The framework requires it; the package starter kit declares it.
-- [ ] **TOOL-5** (Rule) Script names are the starter kit's: `dev`, `build`, `start`, `test`, `lint`, `format`, `typecheck`, plus `codegen` in a monorepo backend and `compile`, `quick:test` and `release` in a package.
+- [ ] **TOOL-5** (Rule) Script names are the starter kit's: `dev`, `build`, `start`, `test`, `lint`, `format`, `typecheck`, plus `codegen` in a monorepo backend and `compile`, `quick:test` and `release` in a package. A script outside this list may be added.
 - [ ] **TOOL-6** (Law) The repository root has `.editorconfig`, `.gitignore`, `.prettierignore`, `README.md` and `LICENSE.md`. The kits ship the first four.
 - [ ] **TOOL-7** (Guideline) Return early. Check each condition that ends the work at the top of the function; do not wrap the main logic in an `if`.
-- [ ] **TOOL-8** (Law) Private state in a class is a `#field` or `#method`. Use `protected` only for a member a subclass or the framework reads.
+- [ ] **TOOL-8** (Law) Private state in a class is a `#field` or `#method`. Use `protected` only for a member a subclass or the framework reads. A `protected` member no subclass in the repository reads needs the class documented as one to extend.
 
 ---
 
@@ -405,7 +405,7 @@ Items:
 
 *When:* You added, moved or renamed a file.
 
-- [ ] **PKG-1** (Law) The implementation is in `src/`. At the repository root the only source files are `index.ts` and `configure.ts`; everything else there is configuration or one of the framework's folders (`providers/`, `services/`, `commands/`, `stubs/`, `bin/`, `tests/`).
+- [ ] **PKG-1** (Law) The implementation is in `src/`. At the repository root the only source files are `index.ts` and `configure.ts`; everything else there is configuration or one of the framework's folders (`providers/`, `services/`, `commands/`, `stubs/`, `factories/`, `modules/`, `bin/`, `tests/`).
 - [ ] **PKG-2** (Rule) Create only the folders the package needs. A package with no container binding has no `providers/` and no `services/`.
 - [ ] **PKG-3** (Law) A static import is a relative path that ends in `.ts`; a lazy `import()` ends in `.js` (IMP-5).
 
@@ -421,11 +421,11 @@ Mechanical checks:
 Items:
 
 - [ ] **PKG-4** (Rule) The npm name is `@kevinjohn/adonisjs-<name>`; the repository is `oss-adonisjs-<name>`. The name says what the package does in the framework's vocabulary.
-- [ ] **PKG-5** (Law) `"type": "module"`, `engines.node >= 24`, `"files": ["build", "!build/bin", "!build/tests"]`, and an `exports` map.
+- [ ] **PKG-5** (Law) `"type": "module"`, `engines.node >= 24`, `"files": ["build", "!build/bin", "!build/tests"]`, and an `exports` map. `files` may list more, as long as tests and `bin` stay out.
 - [ ] **PKG-6** (Law) `@adonisjs/core` and every other framework package the code imports (`@adonisjs/lucid`, `@adonisjs/session`, `@adonisjs/assembler`) is a `peerDependency`, and a `devDependency` for the package's own tests. Optional ones are marked in `peerDependenciesMeta`.
 - [ ] **PKG-7** (Rule) A peer range names the major: `^7.0.0`. Do not pin a peer to an exact version.
 - [ ] **PKG-8** (Law) The package builds with `tsdown` plus `tsc --emitDeclarationOnly --declaration`, and copies `stubs/**/*.stub` into `build` with `copyfiles --up=1`, as the official packages do.
-- [ ] **PKG-9** (Rule) `publishConfig` sets `access: public` and `provenance: true`.
+- [ ] **PKG-9** (Rule) When the package is published to a registry, `publishConfig` sets `access: public` and `provenance: true`.
 
 ## The export map
 
@@ -438,7 +438,7 @@ Mechanical checks:
 Items:
 
 - [ ] **PKG-10** (Law) Nothing outside the export map is importable. A consumer never imports from `build/src/...`.
-- [ ] **PKG-11** (Law) Public types live in `src/types.ts`, exported from `./types`; the file may re-export from other type files. Lists the application extends (`LimitersList`) are interfaces there, augmented from the application's config file. Types that need an optional peer dependency are exported from `./types/<name>` instead, as `@adonisjs/auth` exports `./types/session`.
+- [ ] **PKG-11** (Law) Public types live in `src/types.ts`, exported from `./types`; the file may re-export from other type files. Lists the application extends (`LimitersList`) are interfaces there, augmented from the application's config file. Types that need an optional peer dependency are exported from `./types/<name>` instead, as `@adonisjs/auth` exports `./types/session`. A feature subpath may re-export a type; the type is defined once.
 - [ ] **PKG-12** (Law) The export map is public API. Removing or renaming a subpath is a breaking change.
 
 ## The configure hook and stubs
@@ -454,10 +454,10 @@ Items:
 - [ ] **PKG-13** (Law) A package that needs anything in the application (a config file, a provider, a middleware, an environment variable, a migration) ships a `configure` function, so `node ace add <package>` sets it up. The README does not ask for manual edits the hook could make.
 - [ ] **PKG-14** (Law) The hook changes the application only through codemods: `makeUsingStub`, `updateRcFile` (`addProvider`, `addCommand`, `addPreloadFile`), `registerMiddleware`, `defineEnvVariables`, `defineEnvValidations`, `registerJapaPlugin`, `registerPolicies`. `@adonisjs/assembler` is an optional peer dependency because the codemods need it.
 - [ ] **PKG-15** (Law) The hook is safe to run twice.
-- [ ] **PKG-16** (Law) Choices come from a flag first, then a prompt: `command.parsedFlags.store`, else `command.prompt.choice(...)`. An invalid choice sets `command.exitCode = 1`, logs through `command.logger` and returns.
-- [ ] **PKG-17** (Law) Templates are `.stub` files under `stubs/`, in folders that mirror where they land: `stubs/config/<name>.stub`, `stubs/start/<name>.stub`, `stubs/make/migration/<name>.stub`. Each stub states its destination with `exports({ to: app.configPath('<name>.ts') })`.
+- [ ] **PKG-16** (Law) Choices come from a flag first, then a prompt: `command.parsedFlags.store`, else `command.prompt.choice(...)`. An invalid choice sets `command.exitCode = 1`, logs through `command.logger` and returns. An option with a default is a flag and needs no prompt.
+- [ ] **PKG-17** (Law) Templates are `.stub` files under `stubs/`, in folders that mirror where they land: `stubs/config/<name>.stub`, `stubs/start/<name>.stub`, `stubs/make/migration/<name>.stub`. Each stub states its destination with `exports({ to: app.configPath('<name>.ts') })`. `app.configPath` is the helper for a config file; a stub that lands elsewhere uses that folder's helper (`app.startPath`, `app.migrationsPath`).
 - [ ] **PKG-18** (Law) `stubs/main.ts` exports `stubsRoot = import.meta.dirname`.
-- [ ] **PKG-19** (Law) A stub writes code the application owns afterwards, in this book's application style: `env` read in the config file, `defineConfig`, the `declare module` block.
+- [ ] **PKG-19** (Law) A stub writes code the application owns afterwards, in this book's application style: `env` read in the config file, `defineConfig`, the `declare module` block. The `declare module` block is written only when the package has a list the application extends.
 
 ## Configuration
 
@@ -469,11 +469,11 @@ Mechanical checks:
 
 Items:
 
-- [ ] **PKG-20** (Law) The application configures the package in `config/<name>.ts`, with the package's `defineConfig`.
+- [ ] **PKG-20** (Law) The application configures the package in `config/<name>.ts`, with the package's `defineConfig`. A helper for one feature may be used inside it, as `@adonisjs/auth` uses `sessionGuard`.
 - [ ] **PKG-21** (Law) `defineConfig` validates its input and throws `InvalidArgumentsException` or `RuntimeException` from `@adonisjs/core/exceptions`, with a message that names the package's config and the key.
 - [ ] **PKG-22** (Law) When configuration needs the booted application or a lazily imported driver, `defineConfig` returns a config provider (`configProvider.create`), and the service provider resolves it with `configProvider.resolve`.
 - [ ] **PKG-23** (Rule) The code a package ships (`src/`, `providers/`, `services/`, `commands/`) never reads `process.env` or the `env` service. The application's config file does. The repository's own `bin/` scripts are not shipped and may read `process.env`.
-- [ ] **PKG-24** (Law) Environment variables a package introduces are UPPER_SNAKE with the package's name first: `LIMITER_STORE`, `SESSION_DRIVER`.
+- [ ] **PKG-24** (Law) Environment variables a package introduces are UPPER_SNAKE with the package's name first: `LIMITER_STORE`, `SESSION_DRIVER`. A variable the framework owns (`NODE_ENV`, `APP_KEY`) is not one the package introduces.
 
 ## Provider and container service
 
@@ -483,7 +483,7 @@ Items:
 - [ ] **PKG-26** (Law) `register` binds a singleton: under a dotted name (`'<name>.manager'`) when the application imports it as a container service, otherwise by class. A named binding is added to `ContainerBindings` with `declare module '@adonisjs/core/types'` in the same file.
 - [ ] **PKG-27** (Law) The binding is lazy: configuration is read and the object built inside the singleton callback, not in `register` itself.
 - [ ] **PKG-28** (Law) Events the package emits are typed in `EventsList` in the same block and named `<namespace>:<event>` (`session:initiated`, `limit:exceeded`).
-- [ ] **PKG-29** (Law) A named binding has a `services/main.ts` that resolves it after boot and default-exports it, so the application writes `import limiter from '@adonisjs/limiter/services/main'`.
+- [ ] **PKG-29** (Law) A named binding has a `services/main.ts` that resolves it after boot and default-exports it, so the application writes `import limiter from '@adonisjs/limiter/services/main'`. A binding the application does not import is bound by class (PKG-26) and has none.
 - [ ] **PKG-30** (Law) A property a middleware sets on `HttpContext` is typed in that middleware's file (MID-6), as `@adonisjs/session` does. Macros, getters and Edge plugins the provider registers have their type augmentation in the provider file. A Japa plugin is exported from `./plugins/<tool>` for the application to register in `tests/bootstrap.ts`.
 
 ## Errors, logging and style
@@ -496,18 +496,18 @@ Mechanical checks:
 
 Items:
 
-- [ ] **PKG-31** (Law) Every exception the package throws is defined in `src/errors.ts`, one class per cause: `<Cause>Exception extends Exception`, with a unique raw `static code = 'E_<CODE>'` for each distinct cause and `static status`. A cause is the rule or contract that failed; a different field, value, message or route alone is not a different cause. A subclass that answers with its parent's response keeps its parent's code and is still exported under its own `E_<CODE>` name. The file exports each class under its code, `export const E_<CODE> = <Cause>Exception`, and `index.ts` exports the file as the `errors` namespace: `import { errors } from '<package>'`.
-- [ ] **PKG-32** (Law) The code is stable. The package throws by it, `throw new E_<CODE>()`, and an application recognises it with `instanceof errors.E_<CODE>` or by `code`, never by message. A wire code covers several raw codes only to prevent enumeration or conceal configuration details, with a one-line comment naming what it protects; compatibility alone is not a reason.
+- [ ] **PKG-31** (Law) Every exception the package throws is defined in `src/errors.ts`, one class per cause: `<Cause>Exception extends Exception`, with a unique raw `static code = 'E_<CODE>'` for each distinct cause and `static status`. A cause is the rule or contract that failed; a different field, value, message or route alone is not a different cause. A subclass that answers with its parent's response keeps its parent's code and is still exported under its own `E_<CODE>` name. The file exports each class under its code, `export const E_<CODE> = <Cause>Exception`, and `index.ts` exports the file as the `errors` namespace: `import { errors } from '<package>'`. An exception from the framework or another package that passes through unchanged is not thrown by the package.
+- [ ] **PKG-32** (Law) The code is stable. The package throws by it, `throw new E_<CODE>()`, and an application recognises it with `instanceof errors.E_<CODE>` or by `code`, never by message. A wire code covers several raw codes only to prevent enumeration or conceal configuration details, with a one-line comment naming what it protects; compatibility alone is not a reason. One comment may cover adjacent mappings that protect the same thing.
 - [ ] **PKG-46** (Law) No exported exception constructor, including an inherited one, takes a status or a code. Enforce this through its signature, without runtime mutation guards. Applications choose different response statuses in their own handlers. It takes only what the message or the response needs (an id, a name, a detail sentence, `{ cause }`); a sentence that never varies is `static message`. A package does not use `createError`.
 - [ ] **PKG-47** (Law) A package never throws a bare `Error`. Wrong configuration or wrong use by the application's developer throws `InvalidArgumentsException` or `RuntimeException` from `@adonisjs/core/exceptions`; everything else is a class in `src/errors.ts`.
-- [ ] **PKG-49** (Law) Native `AggregateError` is allowed in two cases only: the work fails and its cleanup fails too, or the work succeeds and more than one cleanup step fails. `errors[0]` is the work's failure, or the first cleanup failure when the work succeeded; later failures follow in the order observed. An `AggregateError` received from another layer is passed on unchanged, unless this layer's cleanup also fails: it is then `errors[0]` of a new one. Every function that throws one or passes one on documents it in `@throws`. It is never used for an expected 4xx outcome or a case a caller branches on; that is a package exception class.
+- [ ] **PKG-49** (Law) Native `AggregateError` is allowed in two cases only: the work fails and its cleanup fails too, or the work succeeds and more than one cleanup step fails. `errors[0]` is the work's failure, or the first cleanup failure when the work succeeded; later failures follow in the order observed. An `AggregateError` received from another layer is passed on unchanged, unless this layer's cleanup also fails: it is then `errors[0]` of a new one. Every function that throws one or passes one on documents it in `@throws`. It is never used for an expected 4xx outcome or a case a caller branches on; that is a package exception class. `@throws` covers what the function throws or knowingly passes on, not a failure inside a callback the application supplies. A delivery that fails after the work is committed is not cleanup.
 - [ ] **PKG-33** (Law) An exception whose response needs more than its status, code and message (a header, a redirect, a different body) implements `handle` on itself, so the application's handler needs no special case. Every other exception is left for the framework to render.
-- [ ] **PKG-34** (Law) Diagnostics use `debuglog('<scope>:<name>')` from `node:util` in `src/debug.ts`. A package does not write to `console`. It logs through the application's logger only when the application's configuration passes that logger in.
-- [ ] **PKG-35** (Law) State, I/O and anything that takes a dependency is a class. An exported function is one of: `defineConfig`; `configure`; a factory that returns an instance or a config provider; a decorator; a mixin; a plugin for Edge, Japa or the assembler; or a pure function, which takes every input as an argument, awaits nothing and reads no module-level variable. A generated file, such as the commands index, is not checked.
+- [ ] **PKG-34** (Law) Diagnostics use `debuglog('<scope>:<name>')` from `node:util` in `src/debug.ts`. A package does not write to `console`. It logs through the application's logger only when the application's configuration passes that logger in. Inside a request, `ctx.logger` is the application's logger and may be used.
+- [ ] **PKG-35** (Law) State is a class. A function the export map exposes is one of: `defineConfig`; `configure`; a factory that returns an instance or a config provider; a decorator; a mixin; a plugin for Edge, Japa or the assembler; or a pure function, which takes every input as an argument, awaits nothing and reads no module-level variable (a constant is not a variable). A function inside the package that keeps no state is not checked, as `@adonisjs/core` keeps its own in `src/utils.ts`. A generated file, such as the commands index, is not checked.
 - [ ] **PKG-36** (Law) A middleware the package ships is a class with `handle(ctx, next, options?)`, exported from its own subpath. The configure hook registers it, unless the middleware reads `ctx.auth`: the README then tells the application where to mount it.
 - [ ] **PKG-37** (Law) A command the package ships is a file in `commands/`. The build writes `build/commands/main.js` with `adonis-kit index build/commands`, exported as `./commands` and registered with `rcFile.addCommand('<package>/commands')`.
-- [ ] **PKG-38** (Law) A package does not import from an application and makes no assumption about its folder names beyond the framework's.
-- [ ] **PKG-48** (Rule) Everything an application calls from the export map has an `@example` in its TSDoc: each exported function, class, decorator and mixin, and each public method on an exported class or service. The example is the application's code, fenced as `ts`. A top-level export's example starts with its import from the public subpath; a method's starts from the instance. One example is enough; a second is for a second way to call it. Types, exception classes and what the framework calls instead of the application (the configure hook, the provider, commands, a middleware's `handle`, a controller's actions) need none.
+- [ ] **PKG-38** (Law) A package does not import from an application and makes no assumption about its folder names beyond the framework's. Code a stub generates is application code and follows the application items.
+- [ ] **PKG-48** (Rule) Everything an application calls from the export map has an `@example` in its TSDoc: each exported function, class, decorator and mixin, and each public method on an exported class or service. The example is the application's code, fenced as `ts`. A top-level export's example starts with its import from the public subpath; a method's starts from the instance. One example is enough; a second is for a second way to call it. Types, exception classes and what the framework calls instead of the application (the configure hook, the provider, commands, a middleware's `handle`, a controller's actions) need none. When the application reaches a method only through an interface, the example is on the interface member.
 
 ## Tests and release
 
@@ -519,7 +519,7 @@ Items:
 - [ ] **PKG-42** (Guideline) Public types are tested with `@japa/expect-type` where inference matters.
 - [ ] **PKG-43** (Law) Coverage is collected with `c8`, as the package starter kit sets up.
 - [ ] **PKG-44** (Rule) Versions follow semver. Each release has a changelog entry and a git tag `v<version>`.
-- [ ] **PKG-45** (Rule) The README has, in this order: what it does, `node ace add <package>`, what the configure hook changed, configuration, usage, errors, and the supported AdonisJS versions.
+- [ ] **PKG-45** (Rule) The README has, in this order: what it does, `node ace add <package>`, what the configure hook changed, configuration, usage, errors, and the supported AdonisJS versions. The install command is the one that works for how the package is distributed.
 
 ---
 

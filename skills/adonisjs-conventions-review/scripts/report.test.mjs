@@ -162,13 +162,33 @@ test('unclear cases become an issue body and a previous run lists what is resolv
       record({
         items: ITEMS.map((item) => ({ item, result: 'pass', reason: item === 'CTL-4' ? 'checked by hand' : '' })),
         findings: [],
-        unclear: [{ item: 'CTL-7', path: CONTROLLER, question: 'Does this count?' }],
+        unclear: [{ item: 'CTL-7', path: CONTROLLER, question: 'Does this count?', read: [] }],
       })
     );
     const result = report('build', run.runDir, '--previous', previous);
     assert.match(result.stdout, /0 law.*1 unclear/);
     assert.match(readFileSync(join(run.runDir, 'unclear.md'), 'utf8'), /## CTL-7\n\n- Does this count\? \(seen in/);
     assert.equal(readOut(run.runDir, 'findings.json').resolved.length, 1);
+  } finally {
+    run.clean();
+  }
+});
+
+test('item prints the cookbook entry and the items cited, and an unclear case must have read them', () => {
+  const printed = report('item', 'CTL-8').stdout;
+  assert.match(printed, /^CTL-8 \(Law\)/);
+  assert.match(printed, /Cookbook: - \*\*CTL-8 \(F\)\*\*/);
+  assert.match(printed, /Cited: IMP-6 \(Rule\)/);
+  const run = scratch();
+  try {
+    report('prepare', run.runDir);
+    const asked = (unclear) => {
+      writeRecord(run.runDir, record({ unclear: [{ item: 'CTL-8', path: CONTROLLER, ...unclear }] }));
+      return report('build', run.runDir);
+    };
+    assert.match(asked({ question: 'Is a singleton a service?', read: [] }).stderr, /it cites IMP-6/);
+    assert.match(asked({ question: 'Treat it as injected.', read: ['IMP-6'] }).stderr, /one question, ending in "\?"/);
+    assert.equal(asked({ question: 'Is a singleton a service?', read: ['IMP-6'] }).status, 0);
   } finally {
     run.clean();
   }
