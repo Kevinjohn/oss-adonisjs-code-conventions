@@ -169,7 +169,7 @@ Items:
 - [ ] **CTL-5** (Law) A controller has no `private` or `protected` method. A step two actions share moves to a service or the model.
 - [ ] **CTL-6** (Law) A controller does not wrap its work in `try`/`catch` to build an error response. It lets the exception reach the exception handler.
 - [ ] **CTL-7** (Rule) Return a value, or use the response helper that names the status: `response.created()`, `response.notFound()`, `response.forbidden()`.
-- [ ] **CTL-8** (Law) A dependency comes through the constructor with `@inject()`, or as an action argument with `@inject()` on the action.
+- [ ] **CTL-8** (Law) A class the container builds, such as a service, comes through the constructor with `@inject()`, or as an action argument with `@inject()` on the action. A container service is imported, not injected (IMP-6).
 - [ ] **CTL-9** (Guideline) Business rules that a command, a listener or a second controller also needs live in a service, not in the action.
 - [ ] **CTL-10** (Guideline) Create a resource controller with `node ace make:controller <name> --resource` (or `--api`), and its validators with `node ace make:validator <name> --resource`.
 
