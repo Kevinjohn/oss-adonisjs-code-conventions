@@ -34,7 +34,7 @@ review runs are in [How to use these conventions](../workflow.md).
 
 - [ ] **VOC-1** (Rule) Use the framework's word for a framework concept, in code, comments, commit messages, issues and documentation.
 - [ ] **VOC-2** (Law) Write "AdonisJS", never "Adonis", in prose. Package names keep their spelling: Lucid, VineJS, Japa, Tuyau, Ace, Edge, Bouncer, Shield.
-- [ ] **VOC-3** (Rule) A word in the cookbook's vocabulary table or in the [framework reserved words](../house/terminology.md#framework-reserved-words) is not reused for anything else. Pick a different word for a product concept that happens to resemble one.
+- [ ] **VOC-3** (Rule) A word in the [cookbook's vocabulary table](./cookbook.md#vocabulary) is not reused for anything else. Pick a different word for a product concept that happens to resemble one.
 
 ## Names
 

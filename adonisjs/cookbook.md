@@ -4,7 +4,7 @@ Draft 4, 2026-11-25. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22
 and Tuyau 1.
 
 This is the coding guidebook for every AdonisJS repository we own: applications, and the
-`@kevinjohn/adonisjs-*` packages that applications consume. It belongs to no single repository.
+packages that applications consume. It belongs to no single repository.
 Someone who knows AdonisJS should open any of our repositories and find every file where the
 framework puts it, named as the framework names it and called what the framework calls it.
 
@@ -1213,7 +1213,7 @@ Recipe, an `@example` on a top-level export and on a method (PKG-48):
  * @example
  * ```ts
  * import { compose } from '@adonisjs/core/helpers'
- * import { SoftDeletes } from '@kevinjohn/adonisjs-lucid-soft-delete'
+ * import { SoftDeletes } from '<package>'
  *
  * export default class Client extends compose(ClientSchema, SoftDeletes) {}
  * ```
@@ -1271,8 +1271,6 @@ the answer is recorded in the repository's departures list.
 | --- | --- | --- | --- |
 | D4 | API response envelope | `serialize(...)` wraps in `{ data }`. | Adopt for new APIs (RES-4). An existing wire contract records a departure. |
 | D7 | Package manager | Kits ship npm scripts and work with any manager. | pnpm everywhere; scripts written so they do not name the manager. |
-| D8 | Authentication in applications that use Account Kit | `@adonisjs/auth` guards, `withAuthFinder`, `loginAs`. | Account Kit is itself an AdonisJS package, so it should expose the framework's surface (guards, `auth.user`, a `loginAs`-style test plugin) rather than each application recording a departure. Audit it against Part 3 first. |
-| D9 | Authorization in applications that use Access Control | Bouncer abilities and policies called from the controller. | Same as D8: the package should present Bouncer's vocabulary (`ability`, `policy`, `authorize`), and the application calls it from the controller. |
 
 ---
 

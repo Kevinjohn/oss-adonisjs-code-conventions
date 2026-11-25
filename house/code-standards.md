@@ -6,15 +6,11 @@ changing. Existing differences are tracked debt, not licence to add more. Wire f
 names, environment variables, ids, emails and test-ids are stable identifiers and never change
 under this page.
 
-The examples name files in CapacityLens, the first product built to these conventions.
-
 ## What tools own
 
-Prettier owns whitespace, quoting and line breaks. The root `.prettierrc.json` sets single quotes
-and a 100-column width. `apps/backend/.prettierrc.cjs` spreads `@adonisjs/prettier-config` and
-keeps semicolons, which the repository uses everywhere. The shadcn primitives in
-`apps/frontend/src/components/ui/` keep the upstream 80-column width and double quotes so
-registry diffs show substantive changes, and stylesheets keep double quotes. Style is not
+Prettier owns whitespace, quoting and line breaks. The configuration starts from
+`@adonisjs/prettier-config`. Vendored UI primitives keep their upstream formatting so registry
+diffs show substantive changes. Style is not
 reviewable: if Prettier produced it, it is correct.
 
 ESLint owns the mechanical rules, run by `pnpm run lint` and again on staged files before each
@@ -58,28 +54,28 @@ await assertCompanyPermission(companyId, 'write', trx); // throws if refused
 
 | Verb               | Promise                                                                                              | Example in the tree                                                              |
 | ------------------ | ---------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| `is`, `has`, `can` | Returns a boolean. No side effects.                                                                  | `canArchive` in `packages/shared/src/domain/lifecycle/transitions.ts`             |
-| `assert`           | Throws when the condition fails. On success returns what it established, or nothing.                 | `assertCompanyPermission` in `apps/backend/app/services/auth/authorization_service.ts`        |
-| `require`          | Returns what the caller needs or throws. The throwing partner of `get`.                              | `requireCompanyScope` in `apps/backend/app/models_support/scoped_model.ts`                |
-| `prepare`           | Prepares a resource for use according to its stated prerequisites.                                         | `prepareDirectory` from `@kevinjohn/adonisjs-sqlite-backup`  |
-| `get`              | Looks one thing up by key. Returns it, or `null` when absent. Never throws for absence.               | `getMasqueradeContextToken` in `apps/frontend/src/api/masqueradeContext.ts`         |
-| `list`             | Returns an array of matches, empty when there are none.                                              | `listActiveCompanyIds` in `apps/backend/app/services/auth/authorization_service.ts`                |
-| `read`             | Reads from storage, the network or the environment.                                                  | `readApiError` in `apps/frontend/src/lib/readApiError.ts`                         |
-| `parse`            | Turns untrusted input into a typed value and never returns garbage: `null`, a typed error or a default. | `parseISOTimestamp` in `packages/shared/src/lib/isoDates.ts`                    |
-| `validate`         | Checks a value that is already typed. Returns a `ValidationResult` and never throws.                 | `validateProjectClient` in `packages/shared/src/lib/integrity.ts`                 |
-| `normalize`        | Returns a repaired copy of the same type.                                                            | `normalizeAccountEmail` in `packages/shared/src/account/validation.ts`            |
-| `resolve`          | Picks one concrete value from preferences or candidates.                                             | `resolveBarColor` in `packages/shared/src/lib/color.ts`                           |
-| `build`            | Derives a new structure from its inputs. Pure.                                                       | `buildColumnGeometry` in `apps/frontend/src/components/scheduler/columnGeometry.ts` |
-| `create`           | Constructs something with identity or capabilities.                                                  | `createMaintenance` in `apps/backend/app/services/storage_maintenance_service.ts`            |
-| `make`             | Test fixtures only.                                                                                  | `makeResource` in `apps/frontend/src/test/fixtures.ts`                            |
-| `use`              | A React hook.                                                                                        | `useScopedData` in `apps/frontend/src/store/useScopedData.ts`                     |
-| `with`             | Runs a callback inside a scope it opens and closes, and returns the callback's result.               | `withActor` in `apps/backend/app/services/auth/current_actor_service.ts`                  |
+| `is`, `has`, `can` | Returns a boolean. No side effects.                                                                  | `canArchive`             |
+| `assert`           | Throws when the condition fails. On success returns what it established, or nothing.                 | `assertCompanyPermission`        |
+| `require`          | Returns what the caller needs or throws. The throwing partner of `get`.                              | `requireCompanyScope`                |
+| `prepare`           | Prepares a resource for use according to its stated prerequisites.                                         | `prepareDirectory`  |
+| `get`              | Looks one thing up by key. Returns it, or `null` when absent. Never throws for absence.               | `getContextToken`         |
+| `list`             | Returns an array of matches, empty when there are none.                                              | `listActiveCompanyIds`                |
+| `read`             | Reads from storage, the network or the environment.                                                  | `readApiError`                         |
+| `parse`            | Turns untrusted input into a typed value and never returns garbage: `null`, a typed error or a default. | `parseISOTimestamp`                    |
+| `validate`         | Checks a value that is already typed. Returns a `ValidationResult` and never throws.                 | `validateProjectClient`                 |
+| `normalize`        | Returns a repaired copy of the same type.                                                            | `normalizeAccountEmail`            |
+| `resolve`          | Picks one concrete value from preferences or candidates.                                             | `resolveBarColor`                           |
+| `build`            | Derives a new structure from its inputs. Pure.                                                       | `buildColumnGeometry` |
+| `create`           | Constructs something with identity or capabilities.                                                  | `createMaintenance`            |
+| `make`             | Test fixtures only.                                                                                  | `makeResource`                            |
+| `use`              | A React hook.                                                                                        | `useScopedData`                     |
+| `with`             | Runs a callback inside a scope it opens and closes, and returns the callback's result.               | `withActor`                  |
 
 Functions that do something rather than answer something use a plain domain verb (`remove`,
 `revoke`, `send`, `record`, `transform`) and say which. Two verbs stay out: `find`, because `get`
 already says "or nothing", and `handle`, because a callback is named for what it does. A prop is
 `onSubmit`; the function passed to it is `submit` or `saveDraft`. Schema-field factories in
-`apps/backend/app/validators` are exempt: they read as a schema, so `uuid()` and `calendarDate()`
+`app/validators` are exempt: they read as a schema, so `uuid()` and `calendarDate()`
 are named for the field they build.
 
 Variables say what they hold, not what type they are: `resources`, not `resourceList`; a map is
@@ -97,7 +93,7 @@ Dependencies (the transaction, the clock, the fetch) are parameters, never impor
 singleton; a clock parameter may default to the current time so production callers need not pass
 it. A backend service that serves a request takes the verified actor and the transaction from its
 controller, and only controllers and middleware read the request; a service that wraps a package
-bound to the request (Masquerade, Account Kit sign-in) receives the context only to hand it to
+bound to the request receives the context only to hand it to
 that package. Boot-time and operator services run outside any request and are exempt: Ace commands
 and `app/services/operator/`, the readiness and schema checks, seed rows, demo and development bootstrap seeding, storage
 maintenance and the transaction helper may import the database service and read the clock, and a
@@ -105,7 +101,7 @@ function they share with request code may default its connection to that service
 absent, not `null`.
 
 Results with several outcomes are a discriminated union on `kind`, named `<Thing>Result` or
-`<Thing>Outcome`; `LifecycleAncestryResult` in `packages/shared/src/domain/lifecycle/ancestry.ts`
+`<Thing>Outcome`; `LifecycleAncestryResult`
 is the pattern, and callers branch on `kind`. `status` is the lifecycle state of a thing, never
 the outcome of a call. `ok` belongs to `ValidationResult` and to wire shapes. In-memory lookups
 return `undefined`, as `Array.find` does; database lookups return `null`, as SQL does; do not
@@ -123,8 +119,7 @@ one is a swallow too.
 
 Validation returns a value; enforcement throws. Validators return a `ValidationResult` or a VineJS
 schema result and never throw on bad input. The write boundary converts a failed result into a
-typed error whose message is safe to show, such as `PlanningOperationException` in
-`apps/backend/app/services/planning/planning_writer_service.ts`, which carries its own status and code and answers
+typed error whose message is safe to show, which carries its own status and code and answers
 for itself. The frontend catches at the form or gesture handler and relays the message
 to the field or toast. Add to the typed error vocabulary rather than sniffing message strings; the
 one exception is a library's own wording, which a test pins.
@@ -133,8 +128,7 @@ Wrap the boundaries where the world is untrusted or fallible: parsing, storage, 
 request bodies, environment lookups and the browser file operations. Do not wrap pure functions
 on the render path, the store's deliberate integrity throws, or the server's rollback-and-rethrow
 points; each of those carries a comment saying why it is not wrapped. When a pure path needs "more safety",
-clamp or return early inside the pure function with a why comment, as the day-span and
-utilisation helpers in `packages/shared/src/lib/` do.
+clamp or return early inside the pure function with a why comment.
 
 The only acceptable swallows are page teardown, a side effect that is itself the surface (a
 health check's 503), device-local preferences falling back to their default, and best-effort
@@ -143,7 +137,7 @@ whose cause would otherwise be invisible leaves a `console.warn` breadcrumb.
 
 Backend boundary rule: `ctx.params`, `request.body()` and Lucid query rows arrive typed `any`.
 Narrow them where they enter, with a `validateUsing` schema for bodies and queries, a one-line
-checked read for route parameters (`parseUserId` in `app/services/admission/admission_decision_service.ts`),
+checked read for route parameters (`parseUserId`),
 and `String(row.column)` or a typed model for rows. An `as` cast is not a narrowing; a comment
 beside any remaining cast says why it is sound.
 
@@ -195,14 +189,13 @@ export async function assertCompanyPermission(
 export default class Client extends compose(ClientSchema, SoftDeletes) {
 
 /**
- * The Masquerade package's route rules: on a member route it admits the view-as mode, requires
+ * The route rules for a read-only mode: on a member route it admits the mode, requires
  * the captured context on a write, and refuses writes and sensitive routes while a mode is active.
  */
-export default class MasqueradeContextMiddleware {
+export default class ReadOnlyModeMiddleware {
 ```
 
-The second and fourth are in the tree today. The first and third are the shape to add when you
-touch those files; do not backfill the rest of the backend in an unrelated change.
+Add the comment when you touch the file; do not backfill a codebase in an unrelated change.
 
 ## Review checklist
 

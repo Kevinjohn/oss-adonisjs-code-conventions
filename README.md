@@ -1,7 +1,7 @@
 # Code conventions
 
-The source of truth for how our AdonisJS applications and `@kevinjohn/adonisjs-*` packages are
-written and reviewed. It belongs to no product. A repository adopts it by linking here from its
+The source of truth for how our AdonisJS applications and packages are written and reviewed. It
+belongs to no product. A repository adopts it by linking here from its
 `AGENTS.md` and keeping only what is its own.
 
 ## What is here
@@ -13,7 +13,7 @@ written and reviewed. It belongs to no product. A repository adopts it by linkin
 | | [house/single-responsibility.md](./house/single-responsibility.md) | One responsibility per file, and when to split. |
 | | [house/code-quality.md](./house/code-quality.md) | The defects to look for in any change. |
 | | [house/code-standards.md](./house/code-standards.md) | Names, errors, comments and TSDoc. |
-| | [house/terminology.md](./house/terminology.md) | One word per concept, and the words the frameworks own. |
+| | [house/terminology.md](./house/terminology.md) | One word per concept, and the format for a repository's own words. |
 | The AdonisJS way | [adonisjs/checklist.md](./adonisjs/checklist.md) | Every AdonisJS item as a check, with its tier. Draft 4. |
 | | [adonisjs/cookbook.md](./adonisjs/cookbook.md) | The reason, origin and recipe for each item. |
 
@@ -28,4 +28,3 @@ written and reviewed. It belongs to no product. A repository adopts it by linkin
 
 - The AdonisJS checklist has item ids and tiers. The pages under `house/` do not yet: they are
   prose, moved here unchanged from where they were written.
-- `house/code-standards.md` still takes its examples from CapacityLens.
