@@ -1,6 +1,6 @@
 ---
 name: adonisjs-conventions-review
-description: Review an AdonisJS application or package against the AdonisJS conventions checklist and write a structured list of findings (findings.json and report.md). Takes a repository or a folder, or the lines a branch changed; a scope (code, tests or both); the checklist sections to run (or all); and an optional reviewer model. Example code and build output are left out unless asked for. Read-only, it reports and never fixes. Use when asked to check, audit or review code or a diff against the AdonisJS conventions or the checklist.
+description: Review an AdonisJS application or package against the AdonisJS conventions checklist and write a structured list of findings (findings.json and report.md). Takes a repository or a folder, or the lines a branch changed; a scope (code, tests or both); the checklist sections to run (or all); and an optional reviewer model. Example code, build output, Markdown and HTML are left out unless asked for. Read-only, it reports and never fixes. Use when asked to check, audit or review code or a diff against the AdonisJS conventions or the checklist.
 ---
 
 # AdonisJS conventions review
@@ -37,8 +37,9 @@ Take the inputs from the request. Do not ask for one that has a default. "Review
 "before the pull request" means `diff` against the branch's base.
 
 Left out by default: example code (a folder named `example` or `examples`, a `*.example.ts`
-file) and output (`build`, `dist`, `coverage`, `tmp`, `.adonisjs`, `node_modules`). Review one
-only when the request names it, by adding its folder to `include`.
+file), output (`build`, `dist`, `coverage`, `tmp`, `.adonisjs`, `node_modules`) and prose (every
+Markdown and HTML file except the root `README.md`). Review one only when the request names it,
+by adding its folder or path to `include`.
 
 ## Rules
 
