@@ -1,6 +1,6 @@
 ---
 name: adonisjs-conventions-review
-description: Review an AdonisJS application or package against the AdonisJS conventions checklist and write a structured list of findings (findings.json and report.md). Takes a repository or a folder, a scope (code, tests or both), the checklist sections to run (or all) and an optional reviewer model. Read-only, it reports and never fixes. Use when asked to check, audit or review code against the AdonisJS conventions or the checklist.
+description: Review an AdonisJS application or package against the AdonisJS conventions checklist and write a structured list of findings (findings.json and report.md). Takes a repository or a folder, or the lines a branch changed; a scope (code, tests or both); the checklist sections to run (or all); and an optional reviewer model. Example code and build output are left out unless asked for. Read-only, it reports and never fixes. Use when asked to check, audit or review code or a diff against the AdonisJS conventions or the checklist.
 ---
 
 # AdonisJS conventions review
@@ -16,18 +16,28 @@ The checklist and its procedure are in the repository this skill belongs to. Fin
 - `workflow.md`: the tiers, when n/a is valid, departures. Read it before the first review.
 - `skills/adonisjs-conventions-review/scripts/report.mjs`: called `report` below. Run it with `node`.
 
+The script lists the files, runs the mechanical checks and writes every output file. A reviewer
+reads code and writes one record. Nothing else is written by hand.
+
 ## Inputs
 
 | Input | Values | Default |
 | --- | --- | --- |
 | target | A repository, or a folder in one. | The current directory. |
+| diff | A base branch or commit. The review covers only the lines changed since it. | None: every tracked file. |
 | scope | `code`, `tests`, `both`. | `both` |
 | sections | Section slugs from `report list`, a part (`every-change`, `applications`, `packages`), or `all`. | `all` |
-| model | The model the reviewers run on. | Sonnet in Claude, Terra in Codex. |
+| include | Folders to review that are left out by default. | None. |
+| model | The model the reviewers and verifiers run on. | Sonnet in Claude, Terra in Codex. |
 | departures | Path to the target's departures list. | Found by its heading; see step 2. |
-| previous | A `findings.json` from an earlier run, to mark each finding new or open. | None. |
+| previous | A `findings.json` from an earlier run, to list what is resolved since. | None. |
 
-Take the inputs from the request. Do not ask for one that has a default.
+Take the inputs from the request. Do not ask for one that has a default. "Review this branch" or
+"before the pull request" means `diff` against the branch's base.
+
+Left out by default: example code (a folder named `example` or `examples`, a `*.example.ts`
+file) and output (`build`, `dist`, `coverage`, `tmp`, `.adonisjs`, `node_modules`). Review one
+only when the request names it, by adding its folder to `include`.
 
 ## Rules
 
@@ -35,6 +45,7 @@ Take the inputs from the request. Do not ask for one that has a default.
   change no code and no departures list.
 - A finding is an item id, a `path:line`, the quoted sentence of the item and the quoted code.
   No opinion, no cause, no fix.
+- Review only the files in `files.json`. With a diff, a finding is on a line the diff changed.
 - Something no item covers is not a finding. Leave it out.
 - A guideline gets at most one finding per item.
 - A finding a numbered departure or an Aligning entry covers is still recorded, with that
@@ -58,20 +69,21 @@ Take the inputs from the request. Do not ask for one that has a default.
 
 Use the given path. Otherwise search the target repository's Markdown files for a heading that
 contains "departures". Record the path, relative to the target's repository root, or `null` when
-there is none. With `null`, no finding
-carries a departure number.
+there is none. With `null`, no finding carries a departure number.
 
-### 3. Create the run folder
+### 3. Create the run folder and prepare it
 
-`<repository root of the target>/.conventions-review/<UTC time as YYYYMMDDTHHMMSSZ>/`, with a
-`sections/` folder in it. Write `.conventions-review/.gitignore` containing `*` so the folder is
-never committed. Then write `run.json`:
+`<repository root of the target>/.conventions-review/<UTC time as YYYYMMDDTHHMMSSZ>/`. Write
+`.conventions-review/.gitignore` containing `*` so the folder is never committed. Then write
+`run.json`:
 
 ```json
 {
   "root": "/absolute/path/to/the/root",
   "commit": "<git rev-parse --short HEAD of the target>",
   "folder": "app/controllers",
+  "diff": null,
+  "include": [],
   "kind": "application",
   "scope": "both",
   "sections": ["every-change/names", "applications/controllers"],
@@ -80,8 +92,17 @@ never committed. Then write `run.json`:
 }
 ```
 
-`folder` is the target relative to the root, `.` for the whole root. `sections` is the slugs
-chosen, in checklist order; `all` is every slug `report list <kind>` prints.
+`folder` is the target relative to the root, `.` for the whole root. `diff` is the base, or
+`null`. `sections` is the slugs chosen, in checklist order; `all` is every slug
+`report list <kind>` prints.
+
+Run `report prepare <run folder>`. It writes:
+
+- `files.json`: the files in this review, and with a diff the changed line ranges of each.
+- `checks/<section>.json`: each mechanical check of each section, already run, with the lines it
+  printed and the items it supports.
+
+When `files.json` lists no file, stop and say so.
 
 ### 4. First pass: one reviewer per section
 
@@ -93,22 +114,24 @@ A reviewer is given, and needs nothing else:
 
 - The section text from `report section <slug>`, verbatim.
 - The n/a rule and the tier table from `workflow.md`, verbatim.
-- The root, the folder, the scope and the path of the departures list.
+- The root, the paths of `files.json` and of its section's file under `checks/`, and the path of
+  the departures list.
 - The "Rules" above and the record format below.
+- A name of its own, for `reviewer`.
 
 A reviewer does this:
 
-1. Lists the files the section is about, inside the folder and the scope. Read the section's
-   *When* line as "the folder holds": "You touched a controller" means the controller files in
-   the folder, and "Every change" means every file in the folder. `code` is every file outside `tests/` that is not a `*.spec.ts` file; `tests` is
-   the rest. When no file matches, every item is n/a with the reason "no file in scope".
-2. Runs the section's mechanical checks from the root. A check points at lines to read; the item
-   decides. A check that cannot run is recorded as `not run` with the reason. Record the
-   section's checks only; a search of your own is not a check.
-3. Reads every listed file in full, and gives each item one result: `pass`, `fail`, `n/a` or
-   `departure`. An item with several sentences passes only when every sentence holds. A
-   guideline about how a file was made, which the files do not show, is n/a with the reason
-   "not decidable from the files".
+1. Picks from `files.json` the files the section is about. Read the section's *When* line as
+   "the review holds": "You touched a controller" means the controller files in `files.json`,
+   and "Every change" means every file in it. When no file matches, every item is n/a with the
+   reason "no file in scope".
+2. Reads its checks file. Each printed line is a place to read; the item decides. It runs no
+   check itself and records none.
+3. Reads every picked file in full, and gives each item one result: `pass`, `fail`, `n/a` or
+   `departure`. An item with several sentences passes only when every sentence holds. An item
+   that passes although a check that names it printed lines needs a `reason`. A guideline about
+   how a file was made, which the files do not show, is n/a with the reason "not decidable from
+   the files".
 4. Writes one finding for each place an item fails, quoting the code exactly as the file has it.
    Where an item fails because something is absent, `code` is empty and `observed` says what is
    absent and where it was looked for.
@@ -118,15 +141,13 @@ A reviewer does this:
 
 ```json
 {
-  "section": "applications/controllers",
+  "reviewer": "controllers-reviewer",
   "files_read": ["app/controllers/projects_controller.ts"],
-  "checks": [
-    { "command": "grep -rn \"try {\" app/controllers", "result": "output", "note": "2 lines" }
-  ],
   "items": [
     { "item": "CTL-4", "result": "fail" },
     { "item": "CTL-5", "result": "pass" },
-    { "item": "CTL-10", "result": "n/a", "reason": "no resource controller in the folder" }
+    { "item": "CTL-6", "result": "pass", "reason": "each try block recovers and answers normally" },
+    { "item": "CTL-10", "result": "n/a", "reason": "not decidable from the files" }
   ],
   "findings": [
     {
@@ -143,13 +164,12 @@ A reviewer does this:
     {
       "item": "CTL-7",
       "path": "app/controllers/exports_controller.ts",
-      "question": "Does `response.send()` count as a helper that names the status?"
+      "question": "Does a status set through a variable count as a status set by number?"
     }
   ]
 }
 ```
 
-- `checks[].result` is `as stated`, `output` or `not run`.
 - `items` has every item of the section, once. `n/a` needs a `reason`.
 - `sentence` is copied from the item. `code` is copied from the file; check it is there before
   writing it. `observed` is one factual line, used only when the two quotes do not show the
@@ -157,35 +177,51 @@ A reviewer does this:
 
 ### 5. Check the records
 
-Run `report build <run folder>`. It rejects an item with no result, a fail with no finding, a
-sentence that is not in the item, and a code quote that is not in the file. Send each rejected
-record back to its reviewer once. A record that is still rejected is corrected by you from the
-file.
+Run `report build <run folder>`. It rejects, among others: an item with no result, a fail with
+no finding, a sentence that is not in the item, a code quote that is not in the file, a file
+that is not in `files.json`, a line the diff did not change, and a second finding on a
+guideline. Send each rejected record back to its reviewer once. A record that is still rejected
+is corrected by you from the file.
 
 ### 6. Second pass: verify
 
-Give every finding with no departure number to a verifier that did not write it, on the reviewer
-model. A reviewer never verifies its own findings. The verifier gets the finding, the item's full text and the file. It opens the file and
-answers one question: does the quoted code fail the quoted sentence? It writes `"verified": true`
-or `"verified": false` with a one-line `"verify_note"` into the finding in the section file. It
-adds no finding. There is no third pass.
+`build` wrote `verify.json`: every finding still to verify, with the item's full text, the
+quoted sentence, the path, the line and the code. It leaves out what the reviewer observed.
+
+Give `verify.json` to a verifier on the reviewer model that wrote none of those findings. For
+each entry the verifier:
+
+1. Opens the file and reads the whole function or block around the line.
+2. Writes down, in one line, what that code does. This comes before any judgement.
+3. Answers one question: does that code fail the quoted sentence, as the item is written? A
+   finding that needs a reading the item's words do not state is false.
+4. In the entry's `section_file`, adds to the matching finding `"verified": true` or `false`,
+   `"verify_note"` with the line from step 2, and `"verifier"` with its own name, which is not
+   the reviewer's.
+
+The verifier adds no finding. There is no third pass.
 
 ### 7. Build and report
 
 Run `report build <run folder>`, with `--previous <findings.json>` when one was given. It writes:
 
-- `findings.json`: every finding with a stable `key`, its tier, the cookbook item that shows the
-  pattern to follow, and `status` (`new` or `open`); the findings the second pass rejected; the
-  findings resolved since the previous run; and the result of every item.
+- `findings.json`: every finding with a stable `key`, its tier and the cookbook item that shows
+  the pattern to follow; the findings the second pass rejected; the findings resolved since the
+  previous run; and the result of every item and every check.
 - `report.md`: the same as tables. Findings by tier, then the coverage of every item.
+- `unclear.md`, when a reviewer recorded an unclear case: the body of an issue for the
+  conventions repository, grouped by item.
 
-Answer with the path of `report.md`, the count of law, rule and guideline findings, and the
-count not verified. Say which sections had no file in scope, and list the `unclear` entries. Do nothing further unless asked.
+Answer with the path of `report.md`, the count of law, rule and guideline findings, the count
+not verified, and the count of files left out. Say which sections had no file in scope. When
+`unclear.md` exists, give its path and say it is ready to file. Do nothing further unless asked.
 
 ## What comes after
 
 Not part of this skill; each needs its own request.
 
+- `unclear.md` filed as an issue in the conventions repository, and the wording settled there
+  before any code changes.
 - One issue per failed item, holding the item text, the cookbook item and every location from
   `findings.json`.
 - The fix, by a stronger model than the reviewers.

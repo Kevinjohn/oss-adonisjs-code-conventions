@@ -357,8 +357,7 @@ router
   `response.created()`, `response.notFound()`, `response.forbidden()`. `response.send()` with no
   status set counts as a returned value. Do not set a status by number (`response.status(404)`).
 - **CTL-8 (F)** A class the container builds, such as a service, comes through the constructor
-  with `@inject()`, or as an action argument with `@inject()` on the action. A container service
-  is imported, not injected (IMP-6).
+  with `@inject()`, or as an action argument with `@inject()` on the action. A container service, which is an instance a `services` path exports, is imported, not injected (IMP-6). A class with no such export is injected.
 - **CTL-9 (H)** Business rules that a command, a listener or a second controller also needs live in
   a service, not in the action.
 - **CTL-10 (F)** Create a resource controller with `node ace make:controller <name> --resource` (or
