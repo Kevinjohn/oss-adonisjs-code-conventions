@@ -1,6 +1,6 @@
 # AdonisJS cookbook
 
-Draft 6, 2026-11-25. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
+Draft 7, 2026-11-25. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
 and Tuyau 1.
 
 This is the coding guidebook for every AdonisJS repository we own: applications, and the
@@ -106,7 +106,7 @@ and **logout** (the framework's words for starting and ending a session).
   `@unicorn/filename-case`. A name a tool or a platform prescribes (`README.md`, `LICENSE`, a tool's configuration file) keeps its spelling. Documentation and asset files are not covered.
 - **NAM-2 (F)** Classes and types are PascalCase. Interfaces have no `I` prefix. Variables and
   functions are camelCase; constants may be UPPER_CASE. A variable that holds a class is PascalCase: `const { default: User } = await import('#models/user')`.
-- **NAM-3 (F)** A file that holds a class holds one class, and exports it as the generator does: a default export for a controller, model, middleware, exception, event, listener, mail, policy, transformer, provider, seeder and command; a named export for a service (`export class AvatarService`). Validators, factories, config helpers and errors are named exports. A package's `src/errors.ts` holds every exception class of the package (PKG-31).
+- **NAM-3 (F)** A file that holds a class holds one class, and exports it as the generator does: a default export for a controller, model, middleware, exception, event, listener, mail, policy, transformer, provider, seeder and command; a named export for a service (`export class AvatarService`). Validators, factories and config helpers are named exports. In a package, `src/errors.ts` holds every exception class as a named export (PKG-31).
 - **NAM-4 (F)** Create a file with its generator (`node ace make:*`), so the name, suffix and folder
   are the framework's.
 
@@ -245,8 +245,7 @@ The alias set, from the `api-monorepo` kit:
 
 - **CFG-1 (F)** Every environment variable is declared and validated in `start/env.ts`. A secret
   uses `Env.schema.secret()`.
-- **CFG-2 (F)** Only `config/` files read the `env` service. Controllers, middleware, services and
-  models read configuration, never `env` and never `process.env`.
+- **CFG-2 (F)** Only `config/` files read the `env` service. Controllers, middleware, services and models read configuration, never `env` and never `process.env`. Setting `process.env.NODE_ENV` in a `bin/` entry point, as the generated `bin/test.ts` does, is not reading it.
 - **CFG-3 (F)** Ask the application for its state with `app.inProduction`, `app.inDev` and
   `app.inTest`. Do not compare `NODE_ENV`.
 - **CFG-4 (F)** A `config/` file imports `env`, framework helpers and the package's `defineConfig`,
@@ -685,7 +684,7 @@ export default class extends BaseSchema {
   passing the values it needs.
 - **SVC-4 (F)** Replace a service in a test with the test context's `swap(Service, fake)`, which
   restores itself.
-- **SVC-5 (P)** Under `app/`, behaviour that has state, does I/O or takes a dependency is a class method. An exported function is a factory that builds and returns an instance, or a pure function, which takes every input as an argument, awaits nothing and reads no module-level variable.
+- **SVC-5 (P)** Under `app/`, behaviour that has state, does I/O or takes a dependency is a class method. An exported function is a factory that builds and returns an instance, or a pure function, which takes every input as an argument, awaits nothing and reads no module-level variable. A constant is not a variable (PKG-35).
 - **SVC-6 (F)** Write a provider only for container bindings, framework extensions (macros,
   `HttpContext` properties), or work that starts and stops with the application. One-off setup is
   a preload file.
@@ -845,7 +844,7 @@ export default class HealthChecksController {
 
 - **CMD-1 (F)** A command is a default-exported class in `commands/` that extends `BaseCommand` and
   sets `static commandName` and `static description`.
-- **CMD-2 (F)** A grouped command is named `namespace:action`.
+- **CMD-2 (F)** A grouped command is named `namespace:action`. The name has one colon, as every command of the framework has.
 - **CMD-3 (F)** A command that touches models or services sets
   `static options = { startApp: true }`.
 - **CMD-4 (F)** Inputs are declared with `@args` and `@flags`, each with a description.

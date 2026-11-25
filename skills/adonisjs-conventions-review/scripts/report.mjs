@@ -2,7 +2,7 @@
 /**
  * Reads the AdonisJS checklist, prepares a review run and builds its output.
  *
- *   report.mjs list [application|package]   sections that apply, one per line
+ *   report.mjs list [application|package]   sections that apply, one per line (the draft on stderr)
  *   report.mjs section <slug>               the section's text, as the checklist has it
  *   report.mjs item <id>                    an item, its cookbook entry and the items they cite
  *   report.mjs prepare <run-dir>            lists the files in scope and runs the mechanical checks
@@ -24,7 +24,7 @@ const CHECKLIST_PATH = join(REPOSITORY, 'adonisjs/checklist.md');
 const COOKBOOK_PATH = join(REPOSITORY, 'adonisjs/cookbook.md');
 const TERMINOLOGY_CHECK = join(REPOSITORY, 'scripts/check-terminology.mjs');
 const PART_KINDS = { 1: ['application', 'package'], 2: ['application'], 3: ['package'] };
-const RESULTS = ['pass', 'fail', 'n/a', 'departure'];
+const RESULTS = ['pass', 'fail', 'n/a', 'departure', 'unclear'];
 const TIERS = ['Law', 'Rule', 'Guideline'];
 // Example code and build or tool output are not reviewed unless the run includes them by path.
 const EXCLUDED_FOLDERS = new Set([
@@ -165,6 +165,13 @@ function readRun(runDir) {
     errors.push('run.json: "scope" is code, tests or both');
   }
   if (errors.length > 0) fail(errors);
+  if (run.sections === 'all') {
+    // A code review has no test file, so the sections about tests have nothing to judge.
+    run.sections = parseChecklist()
+      .sections.filter((section) => section.kinds.includes(run.kind))
+      .map((section) => section.slug)
+      .filter((slug) => run.scope !== 'code' || !/\/tests$/.test(slug));
+  }
   return run;
 }
 
@@ -220,7 +227,9 @@ function filesInScope(run) {
 function runCheck(check, run, scope) {
   const base = { check: check.text, command: check.command, items: check.items };
   if (!check.command || !RUNNABLE.test(check.command)) {
-    return { ...base, result: 'not run', note: 'not a command the script runs', lines: [] };
+    const needsDiff = /^git diff\b/.test(check.command ?? '') && !run.diff;
+    const note = needsDiff ? 'needs a diff, and this review has none' : 'not a command the script runs';
+    return { ...base, result: 'not run', note, lines: [] };
   }
   const command = check.command.replace(/^check-terminology\b/, `node "${TERMINOLOGY_CHECK}"`);
   const done = spawnSync('bash', ['-c', `${command} 2>&1`], {
@@ -310,6 +319,7 @@ function build(runDir, previousPath) {
     if (record.checks) say('"checks" is not yours to write: the script records the checks');
     const results = new Map((record.items ?? []).map((entry) => [entry.item, entry]));
     const live = new Map();
+    const seen = new Set();
     const read = new Set(record.files_read ?? []);
     if (read.size === 0 && (record.items ?? []).some((entry) => entry.result !== 'n/a')) {
       say('"files_read" is empty although an item has a result other than n/a');
@@ -363,6 +373,10 @@ function build(runDir, previousPath) {
       } else if (!squash(finding.observed)) {
         say(`${where}: a finding with no "code" needs "observed"`);
       }
+      // The same sentence of the same item at the same place is one finding, however often it is written.
+      const place = [item.id, finding.path, line ?? squash(finding.observed), squash(finding.sentence)].join('|');
+      if (seen.has(place)) continue;
+      seen.add(place);
       const judged = typeof finding.verified === 'boolean';
       if (judged && (!squash(finding.verifier) || finding.verifier === record.reviewer)) {
         say(`${where}: "verifier" must name an agent other than the reviewer`);
@@ -426,7 +440,10 @@ function build(runDir, previousPath) {
       let outcome = result.result;
       let reason = squash(result.reason);
       if (outcome === 'n/a' && !reason) say(`${item.id}: n/a needs a reason`);
-      if ((outcome === 'pass' || outcome === 'n/a') && raised > 0) {
+      if (outcome === 'unclear' && !(record.unclear ?? []).some((entry) => entry.item === item.id)) {
+        say(`${item.id}: an unclear result needs an unclear case for the item`);
+      }
+      if (['pass', 'n/a', 'unclear'].includes(outcome) && raised > 0) {
         say(`${item.id}: result is ${outcome} but it has findings`);
       }
       if (item.tier === 'Guideline' && raised > 1) {
@@ -594,7 +611,7 @@ function renderReport({ checklist, run, summary, findings, resolved, coverage })
 const [command, ...args] = process.argv.slice(2);
 if (command === 'list') {
   const { draft, sections } = parseChecklist();
-  console.log(draft);
+  console.error(draft);
   for (const section of sections) {
     if (args[0] && !section.kinds.includes(args[0])) continue;
     console.log(`${section.slug}\t${section.items.length} items\t${section.when}`);
