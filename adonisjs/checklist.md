@@ -1,6 +1,6 @@
 # AdonisJS pre-PR checklist
 
-Draft 13, 2026-11-26. The working half of the [AdonisJS cookbook](./cookbook.md): every
+Draft 14, 2026-11-26. The working half of the [AdonisJS cookbook](./cookbook.md): every
 rule in it, as a check. The cookbook holds the reasons, the origin of each rule, the vocabulary
 table and the recipes. The rule id is the same in both; the tier and the wording that is checked
 are here.
@@ -15,6 +15,9 @@ are here.
    is covered by section 1 and by "The frontend API client". A separate frontend package is covered
    by "Vocabulary", "Lint, format and TypeScript" and "The frontend API client", and by nothing
    else: the monorepo starter kit ships `apps/frontend` empty, for the framework of your choice.
+   A workspace package with no `@adonisjs/core` dependency is covered as a separate frontend package
+   is. Files at the root of a monorepo, outside every package, are covered by "Vocabulary" and
+   TOOL-2, and by nothing else.
    A test file is covered by section 1 and by "Tests" (in a package, "Tests and release"), and by
    nothing else: the other sections check the code the application or the package runs. A test file
    of a separate frontend package is covered by "Vocabulary" and "Lint, format and TypeScript".
@@ -46,7 +49,7 @@ Mechanical checks:
 
 Items:
 
-- [ ] **VOC-1** (Rule) Use the framework's word for a framework concept, in code, comments, commit messages, issues and documentation. A framework word names the framework's operation only: `logout` ends the current session, and ending another session or a token is not a logout. A name is checked where it is declared, not at each use.
+- [ ] **VOC-1** (Rule) Use the framework's word for a framework concept, in code, comments, commit messages, issues and documentation. A framework word names the framework's operation only: `logout` ends the current session, and ending another session or a token is not a logout. A name is checked where it is declared, not at each use. A name for a product action, screen or route (a `signIn` helper that fills the product's form) follows the repository's own words, not this item.
 - [ ] **VOC-2** (Law) Write "AdonisJS", never "Adonis", in prose. Package names keep their spelling: Lucid, VineJS, Japa, Tuyau, Ace, Edge, Bouncer, Shield. An identifier, a third-party name and a quotation of the rejected spelling keep theirs. A test title is prose.
 - [ ] **VOC-3** (Rule) A word in the [cookbook's vocabulary table](./cookbook.md#vocabulary) is not reused for anything else. Pick a different word for a product concept that happens to resemble one. The item covers a name the repository coins. The framework's own other uses of a word (a route group) and another library's term (a Prisma model, a TypeScript type guard) are not reuse. In a compound name the word counts only when it is the noun that names the thing. The item is checked in server code, on a name where it is declared: an exported identifier, a file name, a route name, a table or a column. Prose, a local variable and a parameter are not checked. Frontend code is not checked: its framework has words of its own (a store action, an event listener).
 
@@ -55,8 +58,8 @@ Items:
 *When:* Every change.
 
 - [ ] **NAM-1** (Law) Files and folders are `snake_case`. The official ESLint preset enforces it with `@unicorn/filename-case`. A name a tool or a platform prescribes (`README.md`, `LICENSE`, a tool's configuration file) keeps its spelling. Documentation and asset files are not covered.
-- [ ] **NAM-2** (Law) Classes and types are PascalCase. Interfaces have no `I` prefix. Variables and functions are camelCase; constants may be UPPER_CASE. A variable that holds a class is PascalCase: `const { default: User } = await import('#models/user')`. A React component, and a variable that holds one, is PascalCase, as the React starter kit exports `Login` from `inertia/pages/auth/login.tsx`.
-- [ ] **NAM-3** (Law) A file that holds a class holds one class, and exports it as the generator does: a default export for a controller, model, middleware, exception, event, listener, mail, policy, transformer, provider, seeder and command; a named export for a service (`export class AvatarService`). Validators, factories and config helpers are named exports. In a package, `src/errors.ts` holds every exception class as a named export (PKG-31). The kit's `providers/api_provider.ts` holds a serializer class and exports nothing, and passes. A class declared inside a test or a test group is not checked, as `@adonisjs/core` declares them in `tests/helpers.spec.ts`.
+- [ ] **NAM-2** (Law) Classes and types are PascalCase. Interfaces have no `I` prefix. Variables and functions are camelCase; constants may be UPPER_CASE. A variable that holds a class is PascalCase: `const { default: User } = await import('#models/user')`. A React component, and a variable that holds one, is PascalCase, as the React starter kit exports `Login` from `inertia/pages/auth/login.tsx`. A parameter is not checked.
+- [ ] **NAM-3** (Law) A file that holds a class holds one class, and exports it as the generator does: a default export for a controller, model, middleware, exception, event, listener, mail, policy, transformer, provider, seeder and command; a named export for a service (`export class AvatarService`). Validators, factories and config helpers are named exports. In a package, `src/errors.ts` holds every exception class as a named export (PKG-31). The kit's `providers/api_provider.ts` holds a serializer class and exports nothing, and passes. A class declared inside a test or a test group is not checked, as `@adonisjs/core` declares them in `tests/helpers.spec.ts`. Nor is a class in `tests/helpers/`.
 - [ ] **NAM-4** (Guideline) Create a file with its generator (`node ace make:*`), so the name, suffix and folder are the framework's.
 
 ## Imports and modules
@@ -87,7 +90,7 @@ Mechanical checks:
 Items:
 
 - [ ] **TOOL-1** (Law) ESLint starts from `@adonisjs/eslint-config`: `configApp()` in an application, `configPkg()` in a package. Add rules; do not remove the preset's. This item checks the config file. A `// eslint-disable-next-line` comment that names its rule passes, as `@adonisjs/bodyparser` has one in `src/parsers/json.ts`. A directive that covers a whole file, or names no rule, removes the preset's rules and fails, whatever comment explains it. Frontend code inside the application is linted by the same config with the preset's framework rules, as the React starter kit has `configApp(...react)`. A separate frontend package in a monorepo chooses its own ESLint config, as the monorepo starter kit leaves `apps/frontend` empty. Its directives are not checked by this item: there is no preset whose rules they remove.
-- [ ] **TOOL-2** (Rule) Prettier starts from `@adonisjs/prettier-config`: single quotes, 100 columns, ES5 trailing commas, `arrowParens: always`, `quoteProps: consistent`, no semicolons. In a monorepo the root `package.json` declares it for every package, the frontend included, as the monorepo starter kit does.
+- [ ] **TOOL-2** (Rule) Prettier starts from `@adonisjs/prettier-config`: single quotes, 100 columns, ES5 trailing commas, `arrowParens: always`, `quoteProps: consistent`, no semicolons. In a monorepo the root `package.json` declares it for every package, the frontend included, as the monorepo starter kit does. The item is checked once, at the root. The file that declares the preset is not checked.
 - [ ] **TOOL-3** (Law) `tsconfig.json` extends `@adonisjs/tsconfig/tsconfig.app.json` in an application and `@adonisjs/tsconfig/tsconfig.package.json` in a package. Frontend code inside the application extends `@adonisjs/tsconfig/tsconfig.client.json`, as the React starter kit does in `inertia/tsconfig.json`. A separate frontend package in a monorepo chooses its own.
 - [ ] **TOOL-4** (Law) Node is version 24 or later, declared under `engines`. The framework requires it; the package starter kit declares it. In a workspace the root `package.json` declares it, as the monorepo starter kit does.
 - [ ] **TOOL-5** (Rule) Script names are the starter kit's: `dev`, `build`, `start`, `test`, `lint`, `format`, `typecheck`, plus `codegen` in a monorepo backend and `compile`, `quick:test` and `release` in a package. A script outside this list may be added. A package has no `dev` and no `start`, as the package starter kit has none.
@@ -104,8 +107,8 @@ Items:
 
 *When:* You added, moved or renamed a file.
 
-- [ ] **LAY-1** (Rule) A new kind of file goes in the framework's folder for it. Create the folder when the first file needs it and add its `#` alias in the same change.
-- [ ] **LAY-2** (Rule) A framework folder holds only its own kind of file. `app/models` holds models. `start/` holds `env.ts` and files imported while the application boots. `bin/` holds the entry points.
+- [ ] **LAY-1** (Rule) A new kind of file goes in the framework's folder for it. Create the folder when the first file needs it and add its `#` alias in the same change. VineJS custom rules have no folder of their own: they live under `app/validators`.
+- [ ] **LAY-2** (Rule) A framework folder holds only its own kind of file. `app/models` holds models. `start/` holds `env.ts` and files imported while the application boots. `bin/` holds the entry points. A file fails when another framework folder owns its kind. `app/services` holds classes and modules of functions; SVC-5 checks the functions.
 - [ ] **LAY-3** (Law) No catch-all folders (`utils/`, `helpers/`, `lib/`) under `app/`. Group by domain inside a framework folder: `app/services/billing/`.
 - [ ] **LAY-4** (Law) `.adonisjs/` and `database/schema.ts` are generated. Never edit them. Regenerate with `node ace codegen` and with a migration run.
 - [ ] **LAY-5** (Law) `ace.js` is not modified. Code that must run before Ace goes in `bin/console.ts`.
@@ -133,7 +136,7 @@ Items:
 - [ ] **CFG-1** (Law) Every environment variable is declared and validated in `start/env.ts`. A secret uses `Env.schema.secret()`.
 - [ ] **CFG-2** (Law) Only `config/` files read the `env` service. Controllers, middleware, services and models read configuration, never `env` and never `process.env`. Setting `process.env.NODE_ENV` in a `bin/` entry point, as the generated `bin/test.ts` does, is not reading it. A `bin/` entry point reads no variable from `process.env`.
 - [ ] **CFG-3** (Law) Ask the application for its state with `app.inProduction`, `app.inDev` and `app.inTest`. Do not compare `NODE_ENV`.
-- [ ] **CFG-4** (Rule) A `config/` file imports `env`, framework helpers and the package's `defineConfig`, and default-exports the result. It does not import application code. A value exported by name, as `appUrl` and `http` are in the kit's `config/app.ts`, needs no default export.
+- [ ] **CFG-4** (Rule) A `config/` file imports `env`, framework helpers and the package's `defineConfig`, and default-exports the result. It does not import application code. A value exported by name, as `appUrl` and `http` are in the kit's `config/app.ts`, needs no default export. A type-only import (`import type`) is not an import of application code.
 - [ ] **CFG-5** (Law) A config file that defines a named list (mailers, hash drivers, limiter stores, guards) carries the `declare module` block that types it.
 - [ ] **CFG-6** (Law) `adonisrc.ts` is environment-agnostic: no `process.env`, no logic. `providers`, `preloads` and `commands` are lazy imports. A provider or preload that belongs to some environments says so with `{ file, environment }`.
 - [ ] **CFG-7** (Law) Resolve paths with `app.makePath()`, `app.publicPath()`, `app.tmpPath()` and `app.configPath()`. A `bin/` entry point runs before `app` exists and resolves from `import.meta.url`, as the generated `APP_ROOT` does.
@@ -157,8 +160,8 @@ Items:
 - [ ] **RTE-2** (Law) A route points at a controller through the barrel file: `[controllers.Posts, 'index']`, with `import { controllers } from '#generated/controllers'`. A static controller import in a routes file breaks hot reload and is a lint error (`@adonisjs/prefer-lazy-controller-import`).
 - [ ] **RTE-3** (Law) A route with a controller is named by the framework: `<controller_snake>.<method>` (`posts.index`), prefixed by any group `.as()` (`auth.new_account.store`); a single action controller is named `<controller_snake>` alone. Name a route by hand only when it has no controller.
 - [ ] **RTE-4** (Rule) A shared path prefix, middleware or name prefix goes on a `router.group()` with `.prefix()`, `.use()` and `.as()`. Do not repeat it on every route.
-- [ ] **RTE-5** (Law) Attach middleware with `.use(middleware.name(options))`, importing `middleware` from `#start/kernel`.
-- [ ] **RTE-6** (Rule) Use `router.resource()` for a resource with the standard actions, and `.apiOnly()` for an API.
+- [ ] **RTE-5** (Law) Attach middleware with `.use(middleware.name(options))`, importing `middleware` from `#start/kernel`. The argument of `.use` is the `middleware.<name>(...)` call itself, not a helper that returns one. Middleware that many routes share is attached once, on a route group.
+- [ ] **RTE-6** (Rule) Use `router.resource()` for a resource with the standard actions, and `.apiOnly()` for an API. A resource with some of the standard actions uses `.only([...])`, and `.params()` renames its parameter.
 - [ ] **RTE-7** (Guideline) The verb says what the route does: `GET` reads, `POST` creates or acts, `PUT` replaces, `PATCH` changes part, `DELETE` removes.
 - [ ] **RTE-8** (Guideline) Constrain a route parameter with `.where()` or `router.matchers`.
 - [ ] **RTE-9** (Rule) An API is versioned in the outer group's prefix: `/api/v1`.
@@ -198,7 +201,7 @@ Mechanical checks:
 
 Items:
 
-- [ ] **VAL-1** (Law) A validator is `vine.create({ ... })`, exported by name from `app/validators/<resource>.ts`. One file holds every validator for its resource.
+- [ ] **VAL-1** (Law) A validator is `vine.create({ ... })`, exported by name from `app/validators/<resource>.ts`. One file holds every validator for its resource. The file is named for the resource, singular, as `node ace make:validator <resource>` names it, not for a group of requests. A schema built first, to attach an object-level rule, passes: `vine.create(vine.object({ ... }).use(rule))`.
 - [ ] **VAL-2** (Law) The export ends in `Validator`: `signupValidator`, `createPostValidator`, `updatePostValidator`.
 - [ ] **VAL-3** (Law) A validator's name is unique across the application.
 - [ ] **VAL-4** (Rule) Validate with `request.validateUsing(validator)` as the first step of the action. Nothing reads `request.body()`, `request.all()`, `request.qs()`, `request.input()`, `request.only()` or `request.except()` unvalidated. The framework allows it; we do not.
@@ -235,7 +238,7 @@ Items:
 - [ ] **EXC-2** (Law) `handle` turns an exception into a response; `report` logs it and never sends one. `handle` falls through to `super.handle` for anything it does not answer itself. A custom `report` calls `super.report`, or checks `this.shouldReport(...)` first.
 - [ ] **EXC-3** (Rule) Debug output is on outside production: `protected debug = !app.inProduction`.
 - [ ] **EXC-4** (Guideline) Expected errors are kept out of the log with `ignoreCodes` and `ignoreStatuses`.
-- [ ] **EXC-5** (Law) A custom exception extends `Exception` from `@adonisjs/core/exceptions`, lives in `app/exceptions/<name>_exception.ts`, and sets `static status`. It sets `static code` when a client or a handler matches on it.
+- [ ] **EXC-5** (Law) A custom exception extends `Exception` from `@adonisjs/core/exceptions`, lives in `app/exceptions/<name>_exception.ts`, and sets `static status`. It sets `static code` when a client or a handler matches on it. A status inherited from a parent exception counts. A base class that is only extended and never thrown is not checked.
 - [ ] **EXC-6** (Guideline) An exception that needs its own response or log line implements `handle` and `report` on itself (framework option). We prefer that to an `instanceof` branch per exception in the handler.
 - [ ] **EXC-7** (Rule) Exception codes are `E_UPPER_SNAKE`.
 - [ ] **EXC-8** (Law) Recognise a framework error with `instanceof` on its package's `errors` export (`errors.E_VALIDATION_ERROR`, `errors.E_ROUTE_NOT_FOUND`), never by its message.
@@ -250,11 +253,11 @@ Items:
 - [ ] **RES-2** (Rule) A transformer extends `BaseTransformer<T>` and implements `toObject()`. Pick fields with `this.pick(this.resource, [...])`.
 - [ ] **RES-3** (Law) A transformer runs no query. Load relationships with `preload()` first.
 - [ ] **RES-4** (Rule) An API answers with `serialize(Transformer.transform(model))`, which wraps the result in `{ data }`. The `serialize` helper is added to the HTTP context by `providers/api_provider.ts`, as in the kit.
-- [ ] **RES-5** (Rule) A paginated list is `serialize(Transformer.paginate(...))`, so the metadata has the framework's shape.
+- [ ] **RES-5** (Rule) A paginated list is `serialize(Transformer.paginate(...))`, so the metadata has the framework's shape. A page from another paginator (a cursor page) passes its own metadata: `paginate` takes any metadata object.
 - [ ] **RES-6** (Rule) A transformer shapes output. Input is described by a validator.
 - [ ] **RES-7** (Rule) Wire field names are camelCase; columns are `snake_case`.
 - [ ] **RES-8** (Rule) A second shape for the same model is a transformer variant: a `for<Purpose>()` method chosen with `.useVariant()`. It is not a second transformer class.
-- [ ] **RES-9** (Rule) An answer that must not be wrapped uses `serialize.withoutWrapping(...)`.
+- [ ] **RES-9** (Rule) An answer that must not be wrapped uses `serialize.withoutWrapping(...)`. An error answer is not checked by this item.
 
 ## Models and the database
 
@@ -268,11 +271,11 @@ Mechanical checks:
 
 Items:
 
-- [ ] **MOD-1** (Law) One model per table, singular PascalCase, in `app/models/<singular>.ts`. The table is the plural `snake_case` name; set `static table` only when it is not.
+- [ ] **MOD-1** (Law) One model per table, singular PascalCase, in `app/models/<singular>.ts`. The table is the plural `snake_case` name; set `static table` only when it is not. The item does not require a model for every table: a pivot table and a table a package owns have none.
 - [ ] **MOD-2** (Rule) A model extends its generated schema class from `#database/schema`. The model carries relationships, hooks, scopes, computed getters and behaviour. It re-declares a generated column only to refine that one column: `serializeAs`, `prepare` or `consume`, or a narrower type.
 - [ ] **MOD-3** (Rule) Change a generated type that applies across tables in `database/schema_rules.ts`.
 - [ ] **MOD-4** (Rule) Add shared behaviour with a mixin applied through `compose`: `class User extends compose(UserSchema, withAuthFinder(hash))`.
-- [ ] **MOD-5** (Law) Columns are `snake_case`; model properties are camelCase. A foreign key is the singular model name plus `_id`. Timestamps are `created_at` and `updated_at`.
+- [ ] **MOD-5** (Law) Columns are `snake_case`; model properties are camelCase. A foreign key is the singular model name plus `_id`. Timestamps are `created_at` and `updated_at`. A foreign key to a table with no model is the singular table name plus `_id`.
 - [ ] **MOD-6** (Rule) Hide a column from output by re-declaring it with `@column({ serializeAs: null })`.
 - [ ] **MOD-7** (Rule) Declare a relationship with the related model as a function (`() => Post`), and declare both sides.
 - [ ] **MOD-8** (Rule) A hook is a static method with its decorator. A filter that must cover every read is on both `beforeFind` and `beforeFetch`. Hooks do not run for bulk `update` and `delete`.
@@ -305,20 +308,20 @@ Items:
 - [ ] **SVC-1** (Rule) Business logic that more than one entry point needs lives in a class in `app/services/<name>_service.ts`, created with `node ace make:service`, which writes a named export.
 - [ ] **SVC-2** (Law) The container builds a service: a controller or another service takes it through the constructor with `@inject()`, an Ace command through an `@inject()` `run` method, and code with no constructor to inject into through `app.container.make`. Nothing under `app/` calls `new` on a service.
 - [ ] **SVC-3** (Rule) A service does not read the HTTP context unless it is injected with it. A context passed to it as an argument counts as injected.
-- [ ] **SVC-4** (Rule) Replace a service in a test with the test context's `swap(Service, fake)`, which restores itself.
+- [ ] **SVC-4** (Rule) Replace a service in a test with the test context's `swap(Service, fake)`, which restores itself. Assigning to a service's prototype or method, and restoring it by hand, fails.
 - [ ] **SVC-5** (Law) Under `app/`, behaviour that has state, does I/O or takes a dependency is a class method. An exported function is a factory that builds and returns an instance, or a pure function, which takes every input as an argument, awaits nothing and reads no module-level variable. A constant is not a variable (PKG-35).
 - [ ] **SVC-6** (Rule) Write a provider only for container bindings, framework extensions (macros, `HttpContext` properties), or work that starts and stops with the application. One-off setup is a preload file.
-- [ ] **SVC-7** (Law) In a provider: `register` only binds and is synchronous; `boot` configures. `register`, `boot` and `start` also run in console, test and tooling runs, and preload files are imported after `start`, so nothing there connects, listens or spawns. Long-running work starts in `ready` and stops in `shutdown`.
+- [ ] **SVC-7** (Law) In a provider: `register` only binds and is synchronous; `boot` configures. `register`, `boot` and `start` also run in console, test and tooling runs, and preload files are imported after `start`, so nothing there connects, listens or spawns. Long-running work starts in `ready` and stops in `shutdown`. A provider file with no class that adds to a framework class at module scope passes, as the kit's `providers/api_provider.ts` does.
 - [ ] **SVC-8** (Law) Application code logs through the logger, not `console`.
 
 ## Authentication and authorization
 
 *When:* You touched sign-in, sessions or a permission check.
 
-- [ ] **AUT-1** (Rule) Guards are defined in `config/auth.ts`. The session guard is named `web`; the access-token guard is `api`.
+- [ ] **AUT-1** (Rule) Guards are defined in `config/auth.ts`. The session guard is named `web`; the access-token guard is `api`. A further custom guard takes a name of its own.
 - [ ] **AUT-2** (Rule) The `User` model composes `withAuthFinder(hash)`. Credentials are checked with `User.verifyCredentials(email, password)`, which resists timing attacks.
 - [ ] **AUT-3** (Rule) A route is protected by the named `auth` middleware: `.use(middleware.auth())` or `.use(middleware.auth({ guards: ['api'] }))`.
-- [ ] **AUT-4** (Rule) An action reads the user with `auth.getUserOrFail()` behind the `auth` middleware, and `auth.user` where a user is optional.
+- [ ] **AUT-4** (Rule) An action reads the user with `auth.getUserOrFail()` behind the `auth` middleware, and `auth.user` where a user is optional. An action that needs only the user reads it itself and passes it on; it does not pass `auth` for a service to read.
 - [ ] **AUT-5** (Rule) Authorization is Bouncer: an ability in `app/abilities/main.ts` for a simple check, a policy in `app/policies/<model>_policy.ts` for checks about one model.
 - [ ] **AUT-6** (Rule) A policy has one method per action, even when two have the same body.
 - [ ] **AUT-7** (Rule) An action authorizes with `bouncer.with(PostPolicy).authorize('edit', post)`, or `.denies()` when it answers itself.
@@ -380,16 +383,16 @@ Mechanical checks:
 Items:
 
 - [ ] **TST-1** (Rule) Tests run on Japa. Suites are declared in `adonisrc.ts`: `unit` and `functional`, plus `browser` when there are browser tests.
-- [ ] **TST-2** (Rule) A test file is `<subject>.spec.ts`, in a folder that mirrors what it tests.
+- [ ] **TST-2** (Rule) A test file is `<subject>.spec.ts`, in a folder that mirrors what it tests. A subject in a named subfolder (`app/services/billing/`) has its spec in a folder of that name. A subject at the top of its framework folder may have its spec at the top of the suite folder. A file with no Japa test (a compile-time type check) is not a test file.
 - [ ] **TST-3** (Law) `tests/bootstrap.ts` exports `plugins`, `runnerHooks` and `configureSuite`, and is the only place plugins are registered.
 - [ ] **TST-4** (Rule) Related tests sit in a `test.group`. State is reset in a group hook: `group.each.setup(() => testUtils.db().wrapInGlobalTransaction())`, or `truncate()`.
-- [ ] **TST-5** (Rule) An API test calls a route by its name: `client.visit('posts.store')`. The framework also allows a URL; we use the name. A request to a path that has no named route (an unmatched path, a static file, a CORS preflight) uses the URL.
+- [ ] **TST-5** (Rule) An API test calls a route by its name: `client.visit('posts.store')`. The framework also allows a URL; we use the name. A request to a path that has no named route (an unmatched path, a static file, a CORS preflight) uses the URL. A path that only a catch-all route matches is an unmatched path. A request made outside the Japa API client is not checked.
 - [ ] **TST-6** (Rule) An API test signs in with `.loginAs(user)`, with `.withGuard('api')` before it for a guard that is not the default. A test of the sign-in itself, or of a value the sign-in route creates and `loginAs` does not (a session row, a cookie), signs in through the route.
 - [ ] **TST-7** (Rule) Rows are asserted with the `dbAssertions` plugin: `db.assertHas`, `db.assertMissing`, `db.assertCount`.
 - [ ] **TST-8** (Rule) Test rows come from model factories.
-- [ ] **TST-9** (Rule) Fake what leaves the process, with the forms that restore themselves: `using fake = mail.fake()` and the test context's `swap`. The database is real.
+- [ ] **TST-9** (Rule) Fake what leaves the process, with the forms that restore themselves: `using fake = mail.fake()` and the test context's `swap`. The database is real. Replacing a method by assignment fails for a service: use `swap`. Where the framework has no fake (the logger), the test registers the restore with `cleanup()` where it replaces the method.
 - [ ] **TST-10** (Rule) A command is tested with `ace.create(Command, args)`, `command.exec()` and `command.assertSucceeded()`.
-- [ ] **TST-11** (Law) A test file contains tests only. Reusable code is in `tests/helpers/`.
+- [ ] **TST-11** (Law) A test file contains tests only. Reusable code is in `tests/helpers/`. A function or class declared at the top level of a test file fails, even when only that file uses it. One declared inside a test or a group passes.
 - [ ] **TST-12** (Law) No `let` or `var` is shared across tests at file scope. A test creates what it needs, or a group hook does.
 - [ ] **TST-13** (Law) Every `getByText('...')` call given a string passes `exact: true` or `exact: false`. Other locators are not covered.
 - [ ] **TST-14** (Guideline) A test title is a lowercase sentence that says what happens. A group title is a noun phrase.
@@ -400,7 +403,7 @@ Items:
 *When:* You call the API from the frontend.
 
 - [ ] **API-1** (Law) The backend generates the registry with `generateRegistry()` in the `init` hook of `adonisrc.ts`, and exports `./registry` and `./data` from its `package.json`. This item is checked in the backend.
-- [ ] **API-2** (Rule) The frontend creates one Tuyau client for each registry and calls a route by its name: `client.request('posts.index')`, or `api.<route>` with a query integration. The client also takes a typed URL pattern (`client.get('/posts')`); we use the name. No request is a `fetch` of a URL written by hand. A URL built from the route name (`client.getRoute(name).url`, `urlFor`) is for a link or a download. A request made by `fetch` of that URL fails: the client makes the request.
+- [ ] **API-2** (Rule) The frontend creates one Tuyau client for each registry and calls a route by its name: `client.request('posts.index')`, or `api.<route>` with a query integration. The client also takes a typed URL pattern (`client.get('/posts')`); we use the name. No request is a `fetch` of a URL written by hand. A URL built from the route name (`client.getRoute(name).url`, `urlFor`) is for a link or a download. A request made by `fetch` of that URL fails: the client makes the request. A call that a type test expects to fail (`@ts-expect-error`) makes no request and passes.
 - [ ] **API-3** (Law) Request and response types come from the registry. Do not restate them.
 - [ ] **API-4** (Rule) With TanStack Query, a read is `useQuery(api.<route>.queryOptions(...))` and a write is `useMutation(api.<route>.mutationOptions(...))`.
 
