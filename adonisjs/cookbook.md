@@ -1,6 +1,6 @@
 # AdonisJS cookbook
 
-Draft 12, 2026-11-26. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
+Draft 13, 2026-11-26. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
 and Tuyau 1.
 
 This is the coding guidebook for every AdonisJS repository we own: applications, and the
@@ -52,11 +52,11 @@ marked.
 ## Vocabulary
 
 - **VOC-1 (F)** Use the framework's word for a framework concept, in code, comments, commit
-  messages, issues and documentation. A framework word names the framework's operation only: `logout` ends the current session, and ending another session or a token is not a logout.
+  messages, issues and documentation. A framework word names the framework's operation only: `logout` ends the current session, and ending another session or a token is not a logout. A name is checked where it is declared, not at each use.
 - **VOC-2 (H)** Write "AdonisJS", never "Adonis", in prose. Package names keep their spelling:
   Lucid, VineJS, Japa, Tuyau, Ace, Edge, Bouncer, Shield. An identifier, a third-party name and a quotation of the rejected spelling keep theirs. A test title is prose.
 - **VOC-3 (H)** A word in the table below is not reused for anything else. Pick a different word
-  for a product concept that happens to resemble one. The item covers a name the repository coins. The framework's own other uses of a word (a route group) and another library's term (a Prisma model, a TypeScript type guard) are not reuse. In a compound name the word counts only when it is the noun that names the thing.
+  for a product concept that happens to resemble one. The item covers a name the repository coins. The framework's own other uses of a word (a route group) and another library's term (a Prisma model, a TypeScript type guard) are not reuse. In a compound name the word counts only when it is the noun that names the thing. The item is checked in server code, on a name where it is declared: an exported identifier, a file name, a route name, a table or a column. Prose, a local variable and a parameter are not checked. Frontend code is not checked: its framework has words of its own (a store action, an event listener).
 
 | Term | Meaning |
 | --- | --- |
@@ -866,9 +866,9 @@ export default class HealthChecksController {
 - **TST-4 (F)** Related tests sit in a `test.group`. State is reset in a group hook:
   `group.each.setup(() => testUtils.db().wrapInGlobalTransaction())`, or `truncate()`.
 - **TST-5 (H)** An API test calls a route by its name: `client.visit('posts.store')`. The framework
-  also allows a URL; we use the name.
+  also allows a URL; we use the name. A request to a path that has no named route (an unmatched path, a static file, a CORS preflight) uses the URL.
 - **TST-6 (F)** An API test signs in with `.loginAs(user)`, with `.withGuard('api')` before it for a
-  guard that is not the default.
+  guard that is not the default. A test of the sign-in itself, or of a value the sign-in route creates and `loginAs` does not (a session row, a cookie), signs in through the route.
 - **TST-7 (F)** Rows are asserted with the `dbAssertions` plugin: `db.assertHas`,
   `db.assertMissing`, `db.assertCount`.
 - **TST-8 (H)** Test rows come from model factories.
@@ -905,7 +905,7 @@ test.group('New account', (group) => {
 
 - **API-1 (F)** The backend generates the registry with `generateRegistry()` in the `init` hook of
   `adonisrc.ts`, and exports `./registry` and `./data` from its `package.json`. This item is checked in the backend.
-- **API-2 (H)** The frontend creates one Tuyau client for each registry and calls a route by its name: `client.request('posts.index')`, or `api.<route>` with a query integration. The client also takes a typed URL pattern (`client.get('/posts')`); we use the name. No request is a `fetch` of a URL written by hand. A test may create a client of its own. A URL built from the route name (`client.getRoute(name).url`, `urlFor`) is for a link or a download. A request made by `fetch` of that URL fails: the client makes the request.
+- **API-2 (H)** The frontend creates one Tuyau client for each registry and calls a route by its name: `client.request('posts.index')`, or `api.<route>` with a query integration. The client also takes a typed URL pattern (`client.get('/posts')`); we use the name. No request is a `fetch` of a URL written by hand. A URL built from the route name (`client.getRoute(name).url`, `urlFor`) is for a link or a download. A request made by `fetch` of that URL fails: the client makes the request.
 - **API-3 (F)** Request and response types come from the registry. Do not restate them.
 - **API-4 (F)** With TanStack Query, a read is `useQuery(api.<route>.queryOptions(...))` and a
   write is `useMutation(api.<route>.mutationOptions(...))`.

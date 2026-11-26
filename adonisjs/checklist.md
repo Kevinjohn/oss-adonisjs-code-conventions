@@ -1,6 +1,6 @@
 # AdonisJS pre-PR checklist
 
-Draft 12, 2026-11-26. The working half of the [AdonisJS cookbook](./cookbook.md): every
+Draft 13, 2026-11-26. The working half of the [AdonisJS cookbook](./cookbook.md): every
 rule in it, as a check. The cookbook holds the reasons, the origin of each rule, the vocabulary
 table and the recipes. The rule id is the same in both; the tier and the wording that is checked
 are here.
@@ -15,6 +15,9 @@ are here.
    is covered by section 1 and by "The frontend API client". A separate frontend package is covered
    by "Vocabulary", "Lint, format and TypeScript" and "The frontend API client", and by nothing
    else: the monorepo starter kit ships `apps/frontend` empty, for the framework of your choice.
+   A test file is covered by section 1 and by "Tests" (in a package, "Tests and release"), and by
+   nothing else: the other sections check the code the application or the package runs. A test file
+   of a separate frontend package is covered by "Vocabulary" and "Lint, format and TypeScript".
 3. Every law and rule ends as one of: **pass**; **n/a**, with the reason; or, for a rule only,
    **departure**, citing the numbered entry in the repository's departures list. A failed item is
    fixed before the pull request. There is no fourth state.
@@ -43,9 +46,9 @@ Mechanical checks:
 
 Items:
 
-- [ ] **VOC-1** (Rule) Use the framework's word for a framework concept, in code, comments, commit messages, issues and documentation. A framework word names the framework's operation only: `logout` ends the current session, and ending another session or a token is not a logout.
+- [ ] **VOC-1** (Rule) Use the framework's word for a framework concept, in code, comments, commit messages, issues and documentation. A framework word names the framework's operation only: `logout` ends the current session, and ending another session or a token is not a logout. A name is checked where it is declared, not at each use.
 - [ ] **VOC-2** (Law) Write "AdonisJS", never "Adonis", in prose. Package names keep their spelling: Lucid, VineJS, Japa, Tuyau, Ace, Edge, Bouncer, Shield. An identifier, a third-party name and a quotation of the rejected spelling keep theirs. A test title is prose.
-- [ ] **VOC-3** (Rule) A word in the [cookbook's vocabulary table](./cookbook.md#vocabulary) is not reused for anything else. Pick a different word for a product concept that happens to resemble one. The item covers a name the repository coins. The framework's own other uses of a word (a route group) and another library's term (a Prisma model, a TypeScript type guard) are not reuse. In a compound name the word counts only when it is the noun that names the thing.
+- [ ] **VOC-3** (Rule) A word in the [cookbook's vocabulary table](./cookbook.md#vocabulary) is not reused for anything else. Pick a different word for a product concept that happens to resemble one. The item covers a name the repository coins. The framework's own other uses of a word (a route group) and another library's term (a Prisma model, a TypeScript type guard) are not reuse. In a compound name the word counts only when it is the noun that names the thing. The item is checked in server code, on a name where it is declared: an exported identifier, a file name, a route name, a table or a column. Prose, a local variable and a parameter are not checked. Frontend code is not checked: its framework has words of its own (a store action, an event listener).
 
 ## Names
 
@@ -380,8 +383,8 @@ Items:
 - [ ] **TST-2** (Rule) A test file is `<subject>.spec.ts`, in a folder that mirrors what it tests.
 - [ ] **TST-3** (Law) `tests/bootstrap.ts` exports `plugins`, `runnerHooks` and `configureSuite`, and is the only place plugins are registered.
 - [ ] **TST-4** (Rule) Related tests sit in a `test.group`. State is reset in a group hook: `group.each.setup(() => testUtils.db().wrapInGlobalTransaction())`, or `truncate()`.
-- [ ] **TST-5** (Rule) An API test calls a route by its name: `client.visit('posts.store')`. The framework also allows a URL; we use the name.
-- [ ] **TST-6** (Rule) An API test signs in with `.loginAs(user)`, with `.withGuard('api')` before it for a guard that is not the default.
+- [ ] **TST-5** (Rule) An API test calls a route by its name: `client.visit('posts.store')`. The framework also allows a URL; we use the name. A request to a path that has no named route (an unmatched path, a static file, a CORS preflight) uses the URL.
+- [ ] **TST-6** (Rule) An API test signs in with `.loginAs(user)`, with `.withGuard('api')` before it for a guard that is not the default. A test of the sign-in itself, or of a value the sign-in route creates and `loginAs` does not (a session row, a cookie), signs in through the route.
 - [ ] **TST-7** (Rule) Rows are asserted with the `dbAssertions` plugin: `db.assertHas`, `db.assertMissing`, `db.assertCount`.
 - [ ] **TST-8** (Rule) Test rows come from model factories.
 - [ ] **TST-9** (Rule) Fake what leaves the process, with the forms that restore themselves: `using fake = mail.fake()` and the test context's `swap`. The database is real.
@@ -397,7 +400,7 @@ Items:
 *When:* You call the API from the frontend.
 
 - [ ] **API-1** (Law) The backend generates the registry with `generateRegistry()` in the `init` hook of `adonisrc.ts`, and exports `./registry` and `./data` from its `package.json`. This item is checked in the backend.
-- [ ] **API-2** (Rule) The frontend creates one Tuyau client for each registry and calls a route by its name: `client.request('posts.index')`, or `api.<route>` with a query integration. The client also takes a typed URL pattern (`client.get('/posts')`); we use the name. No request is a `fetch` of a URL written by hand. A test may create a client of its own. A URL built from the route name (`client.getRoute(name).url`, `urlFor`) is for a link or a download. A request made by `fetch` of that URL fails: the client makes the request.
+- [ ] **API-2** (Rule) The frontend creates one Tuyau client for each registry and calls a route by its name: `client.request('posts.index')`, or `api.<route>` with a query integration. The client also takes a typed URL pattern (`client.get('/posts')`); we use the name. No request is a `fetch` of a URL written by hand. A URL built from the route name (`client.getRoute(name).url`, `urlFor`) is for a link or a download. A request made by `fetch` of that URL fails: the client makes the request.
 - [ ] **API-3** (Law) Request and response types come from the registry. Do not restate them.
 - [ ] **API-4** (Rule) With TanStack Query, a read is `useQuery(api.<route>.queryOptions(...))` and a write is `useMutation(api.<route>.mutationOptions(...))`.
 

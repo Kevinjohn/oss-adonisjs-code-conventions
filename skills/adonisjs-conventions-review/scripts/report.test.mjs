@@ -227,6 +227,18 @@ test('list prints slugs only, "all" leaves the tests section out of a code revie
   }
 });
 
+test('a review of tests runs the sections of part 1 and the section about tests only', () => {
+  const run = scratch({ sections: 'all', scope: 'tests' });
+  try {
+    assert.equal(report('prepare', run.runDir).status, 0);
+    assert.ok(existsSync(join(run.runDir, 'checks', 'every-change--vocabulary.json')));
+    assert.ok(existsSync(join(run.runDir, 'checks', 'applications--tests.json')));
+    assert.ok(!existsSync(join(run.runDir, 'checks', 'applications--controllers.json')));
+  } finally {
+    run.clean();
+  }
+});
+
 test('a repeated finding is counted once, and an unclear result needs an unclear case', () => {
   const run = scratch();
   try {
