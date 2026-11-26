@@ -1,6 +1,6 @@
 # AdonisJS cookbook
 
-Draft 11, 2026-11-26. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
+Draft 12, 2026-11-26. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
 and Tuyau 1.
 
 This is the coding guidebook for every AdonisJS repository we own: applications, and the
@@ -126,7 +126,7 @@ and **logout** (the framework's words for starting and ending a session).
 ## Lint, format and TypeScript
 
 - **TOOL-1 (F)** ESLint starts from `@adonisjs/eslint-config`: `configApp()` in an application,
-  `configPkg()` in a package. Add rules; do not remove the preset's. This item checks the config file. A `// eslint-disable-next-line` comment that names its rule passes, as `@adonisjs/bodyparser` has one in `src/parsers/json.ts`. A directive that covers a whole file, or names no rule, removes the preset's rules and fails, whatever comment explains it. Frontend code inside the application is linted by the same config with the preset's framework rules, as the React starter kit has `configApp(...react)`. A separate frontend package in a monorepo chooses its own ESLint config, as the monorepo starter kit leaves `apps/frontend` empty.
+  `configPkg()` in a package. Add rules; do not remove the preset's. This item checks the config file. A `// eslint-disable-next-line` comment that names its rule passes, as `@adonisjs/bodyparser` has one in `src/parsers/json.ts`. A directive that covers a whole file, or names no rule, removes the preset's rules and fails, whatever comment explains it. Frontend code inside the application is linted by the same config with the preset's framework rules, as the React starter kit has `configApp(...react)`. A separate frontend package in a monorepo chooses its own ESLint config, as the monorepo starter kit leaves `apps/frontend` empty. Its directives are not checked by this item: there is no preset whose rules they remove.
 - **TOOL-2 (F)** Prettier starts from `@adonisjs/prettier-config`: single quotes, 100 columns, ES5
   trailing commas, `arrowParens: always`, `quoteProps: consistent`, no semicolons. In a monorepo the root `package.json` declares it for every package, the frontend included, as the monorepo starter kit does.
 - **TOOL-3 (F)** `tsconfig.json` extends `@adonisjs/tsconfig/tsconfig.app.json` in an application
@@ -905,7 +905,7 @@ test.group('New account', (group) => {
 
 - **API-1 (F)** The backend generates the registry with `generateRegistry()` in the `init` hook of
   `adonisrc.ts`, and exports `./registry` and `./data` from its `package.json`. This item is checked in the backend.
-- **API-2 (H)** The frontend creates one Tuyau client for each registry and calls a route by its name: `client.request('posts.index')`, or `api.<route>` with a query integration. The client also takes a typed URL pattern (`client.get('/posts')`); we use the name. No request is a `fetch` of a URL written by hand. A test may create a client of its own.
+- **API-2 (H)** The frontend creates one Tuyau client for each registry and calls a route by its name: `client.request('posts.index')`, or `api.<route>` with a query integration. The client also takes a typed URL pattern (`client.get('/posts')`); we use the name. No request is a `fetch` of a URL written by hand. A test may create a client of its own. A URL built from the route name (`client.getRoute(name).url`, `urlFor`) is for a link or a download. A request made by `fetch` of that URL fails: the client makes the request.
 - **API-3 (F)** Request and response types come from the registry. Do not restate them.
 - **API-4 (F)** With TanStack Query, a read is `useQuery(api.<route>.queryOptions(...))` and a
   write is `useMutation(api.<route>.mutationOptions(...))`.

@@ -1,6 +1,6 @@
 # AdonisJS pre-PR checklist
 
-Draft 11, 2026-11-26. The working half of the [AdonisJS cookbook](./cookbook.md): every
+Draft 12, 2026-11-26. The working half of the [AdonisJS cookbook](./cookbook.md): every
 rule in it, as a check. The cookbook holds the reasons, the origin of each rule, the vocabulary
 table and the recipes. The rule id is the same in both; the tier and the wording that is checked
 are here.
@@ -83,7 +83,7 @@ Mechanical checks:
 
 Items:
 
-- [ ] **TOOL-1** (Law) ESLint starts from `@adonisjs/eslint-config`: `configApp()` in an application, `configPkg()` in a package. Add rules; do not remove the preset's. This item checks the config file. A `// eslint-disable-next-line` comment that names its rule passes, as `@adonisjs/bodyparser` has one in `src/parsers/json.ts`. A directive that covers a whole file, or names no rule, removes the preset's rules and fails, whatever comment explains it. Frontend code inside the application is linted by the same config with the preset's framework rules, as the React starter kit has `configApp(...react)`. A separate frontend package in a monorepo chooses its own ESLint config, as the monorepo starter kit leaves `apps/frontend` empty.
+- [ ] **TOOL-1** (Law) ESLint starts from `@adonisjs/eslint-config`: `configApp()` in an application, `configPkg()` in a package. Add rules; do not remove the preset's. This item checks the config file. A `// eslint-disable-next-line` comment that names its rule passes, as `@adonisjs/bodyparser` has one in `src/parsers/json.ts`. A directive that covers a whole file, or names no rule, removes the preset's rules and fails, whatever comment explains it. Frontend code inside the application is linted by the same config with the preset's framework rules, as the React starter kit has `configApp(...react)`. A separate frontend package in a monorepo chooses its own ESLint config, as the monorepo starter kit leaves `apps/frontend` empty. Its directives are not checked by this item: there is no preset whose rules they remove.
 - [ ] **TOOL-2** (Rule) Prettier starts from `@adonisjs/prettier-config`: single quotes, 100 columns, ES5 trailing commas, `arrowParens: always`, `quoteProps: consistent`, no semicolons. In a monorepo the root `package.json` declares it for every package, the frontend included, as the monorepo starter kit does.
 - [ ] **TOOL-3** (Law) `tsconfig.json` extends `@adonisjs/tsconfig/tsconfig.app.json` in an application and `@adonisjs/tsconfig/tsconfig.package.json` in a package. Frontend code inside the application extends `@adonisjs/tsconfig/tsconfig.client.json`, as the React starter kit does in `inertia/tsconfig.json`. A separate frontend package in a monorepo chooses its own.
 - [ ] **TOOL-4** (Law) Node is version 24 or later, declared under `engines`. The framework requires it; the package starter kit declares it. In a workspace the root `package.json` declares it, as the monorepo starter kit does.
@@ -397,7 +397,7 @@ Items:
 *When:* You call the API from the frontend.
 
 - [ ] **API-1** (Law) The backend generates the registry with `generateRegistry()` in the `init` hook of `adonisrc.ts`, and exports `./registry` and `./data` from its `package.json`. This item is checked in the backend.
-- [ ] **API-2** (Rule) The frontend creates one Tuyau client for each registry and calls a route by its name: `client.request('posts.index')`, or `api.<route>` with a query integration. The client also takes a typed URL pattern (`client.get('/posts')`); we use the name. No request is a `fetch` of a URL written by hand. A test may create a client of its own.
+- [ ] **API-2** (Rule) The frontend creates one Tuyau client for each registry and calls a route by its name: `client.request('posts.index')`, or `api.<route>` with a query integration. The client also takes a typed URL pattern (`client.get('/posts')`); we use the name. No request is a `fetch` of a URL written by hand. A test may create a client of its own. A URL built from the route name (`client.getRoute(name).url`, `urlFor`) is for a link or a download. A request made by `fetch` of that URL fails: the client makes the request.
 - [ ] **API-3** (Law) Request and response types come from the registry. Do not restate them.
 - [ ] **API-4** (Rule) With TanStack Query, a read is `useQuery(api.<route>.queryOptions(...))` and a write is `useMutation(api.<route>.mutationOptions(...))`.
 
