@@ -2,7 +2,7 @@
 /**
  * Reads the AdonisJS checklist, prepares a review run and builds its output.
  *
- *   report.mjs list [application|package]   sections that apply, one per line (the draft on stderr)
+ *   report.mjs list [application|package|frontend|workspace] sections that apply, one per line (the draft on stderr)
  *   report.mjs section <slug>               the section's text, as the checklist has it
  *   report.mjs item <id>                    an item, its cookbook entry and the items they cite
  *   report.mjs prepare <run-dir>            lists the files in scope and runs the mechanical checks
@@ -30,6 +30,9 @@ const FRONTEND_SECTIONS = new Set([
   'every-change/lint-format-and-typescript',
   'applications/the-frontend-api-client',
 ]);
+// A workspace package with no @adonisjs/core that is not the frontend: Vocabulary only, as TOOL-2
+// is checked once, at the monorepo root.
+const WORKSPACE_SECTIONS = new Set(['every-change/vocabulary']);
 const RESULTS = ['pass', 'fail', 'n/a', 'departure', 'unclear'];
 const TIERS = ['Law', 'Rule', 'Guideline'];
 // Example code and build or tool output are not reviewed unless the run includes them by path.
@@ -96,9 +99,11 @@ function parseChecklist() {
         checks: [],
         text: [],
       };
-      section.kinds = FRONTEND_SECTIONS.has(section.slug)
-        ? [...PART_KINDS[part.number], 'frontend']
-        : PART_KINDS[part.number];
+      section.kinds = [
+        ...PART_KINDS[part.number],
+        ...(FRONTEND_SECTIONS.has(section.slug) ? ['frontend'] : []),
+        ...(WORKSPACE_SECTIONS.has(section.slug) ? ['workspace'] : []),
+      ];
       sections.push(section);
     }
     if (!section) continue;
@@ -663,6 +668,6 @@ if (command === 'list') {
   build(resolve(args[0]), flag === -1 ? null : args[flag + 1]);
 } else {
   fail([
-    'Usage: report.mjs list [application|package|frontend] | section <slug> | item <id> | prepare <run-dir> | build <run-dir> [--previous <findings.json>]',
+    'Usage: report.mjs list [application|package|frontend|workspace] | section <slug> | item <id> | prepare <run-dir> | build <run-dir> [--previous <findings.json>]',
   ]);
 }

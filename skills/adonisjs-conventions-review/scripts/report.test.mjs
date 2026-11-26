@@ -217,6 +217,10 @@ test('list prints slugs only, "all" leaves the tests section out of a code revie
     report('list', 'frontend').stdout.split('\n').filter(Boolean).map((line) => line.split('\t')[0]),
     ['every-change/vocabulary', 'every-change/lint-format-and-typescript', 'applications/the-frontend-api-client']
   );
+  assert.deepEqual(
+    report('list', 'workspace').stdout.split('\n').filter(Boolean).map((line) => line.split('\t')[0]),
+    ['every-change/vocabulary']
+  );
   const run = scratch({ sections: 'all', scope: 'code' });
   try {
     assert.equal(report('prepare', run.runDir).status, 0);

@@ -68,10 +68,12 @@ by adding its folder or path to `include`.
 - An application root is a folder with `adonisrc.ts`. A package root is a folder with
   `package.json` and no `adonisrc.ts`; it need not have a `configure.ts`. A frontend root is a
   folder with `package.json`, no `adonisrc.ts` and no `@adonisjs/core` in any dependency list:
-  it is not server code, and only three sections cover it.
+  it is not server code, and only three sections cover it. A workspace root is such a folder
+  inside a monorepo that is not the frontend (a shared domain package, repository tooling): only
+  "Vocabulary" covers it, and TOOL-2 is checked in the run of the monorepo root.
 - The root is the target, or the nearest folder above it that is one of these. When the target
   holds several roots, do one complete run for each.
-- The kind is `application`, `package` or `frontend`. `report list <kind>` prints the sections that apply.
+- The kind is `application`, `package`, `frontend` or `workspace`. `report list <kind>` prints the sections that apply.
 - Paths in every record are relative to the root.
 
 ### 2. Find the departures list
