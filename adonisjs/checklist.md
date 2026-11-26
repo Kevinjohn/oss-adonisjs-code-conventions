@@ -1,6 +1,6 @@
 # AdonisJS pre-PR checklist
 
-Draft 10, 2026-11-26. The working half of the [AdonisJS cookbook](./cookbook.md): every
+Draft 11, 2026-11-26. The working half of the [AdonisJS cookbook](./cookbook.md): every
 rule in it, as a check. The cookbook holds the reasons, the origin of each rule, the vocabulary
 table and the recipes. The rule id is the same in both; the tier and the wording that is checked
 are here.
@@ -10,6 +10,11 @@ are here.
 1. Run it before a pull request is opened, on the whole diff, not from memory.
 2. Section 1 applies to every change. After that, do each section whose heading matches a file the
    diff touches. Applications use section 2, packages section 3.
+   Sections 2 and 3 cover server code. Frontend code is what a bundler builds for the browser: the
+   `inertia/` folder of an application, or a separate package in a monorepo. The `inertia/` folder
+   is covered by section 1 and by "The frontend API client". A separate frontend package is covered
+   by "Vocabulary", "Lint, format and TypeScript" and "The frontend API client", and by nothing
+   else: the monorepo starter kit ships `apps/frontend` empty, for the framework of your choice.
 3. Every law and rule ends as one of: **pass**; **n/a**, with the reason; or, for a rule only,
    **departure**, citing the numbered entry in the repository's departures list. A failed item is
    fixed before the pull request. There is no fourth state.
@@ -47,7 +52,7 @@ Items:
 *When:* Every change.
 
 - [ ] **NAM-1** (Law) Files and folders are `snake_case`. The official ESLint preset enforces it with `@unicorn/filename-case`. A name a tool or a platform prescribes (`README.md`, `LICENSE`, a tool's configuration file) keeps its spelling. Documentation and asset files are not covered.
-- [ ] **NAM-2** (Law) Classes and types are PascalCase. Interfaces have no `I` prefix. Variables and functions are camelCase; constants may be UPPER_CASE. A variable that holds a class is PascalCase: `const { default: User } = await import('#models/user')`.
+- [ ] **NAM-2** (Law) Classes and types are PascalCase. Interfaces have no `I` prefix. Variables and functions are camelCase; constants may be UPPER_CASE. A variable that holds a class is PascalCase: `const { default: User } = await import('#models/user')`. A React component, and a variable that holds one, is PascalCase, as the React starter kit exports `Login` from `inertia/pages/auth/login.tsx`.
 - [ ] **NAM-3** (Law) A file that holds a class holds one class, and exports it as the generator does: a default export for a controller, model, middleware, exception, event, listener, mail, policy, transformer, provider, seeder and command; a named export for a service (`export class AvatarService`). Validators, factories and config helpers are named exports. In a package, `src/errors.ts` holds every exception class as a named export (PKG-31). The kit's `providers/api_provider.ts` holds a serializer class and exports nothing, and passes. A class declared inside a test or a test group is not checked, as `@adonisjs/core` declares them in `tests/helpers.spec.ts`.
 - [ ] **NAM-4** (Guideline) Create a file with its generator (`node ace make:*`), so the name, suffix and folder are the framework's.
 
@@ -391,8 +396,8 @@ Items:
 
 *When:* You call the API from the frontend.
 
-- [ ] **API-1** (Law) The backend generates the registry with `generateRegistry()` in the `init` hook of `adonisrc.ts`, and exports `./registry` and `./data` from its `package.json`.
-- [ ] **API-2** (Law) The frontend creates one Tuyau client and calls a route by its name. It does not write a URL by hand.
+- [ ] **API-1** (Law) The backend generates the registry with `generateRegistry()` in the `init` hook of `adonisrc.ts`, and exports `./registry` and `./data` from its `package.json`. This item is checked in the backend.
+- [ ] **API-2** (Rule) The frontend creates one Tuyau client for each registry and calls a route by its name: `client.request('posts.index')`, or `api.<route>` with a query integration. The client also takes a typed URL pattern (`client.get('/posts')`); we use the name. No request is a `fetch` of a URL written by hand. A test may create a client of its own.
 - [ ] **API-3** (Law) Request and response types come from the registry. Do not restate them.
 - [ ] **API-4** (Rule) With TanStack Query, a read is `useQuery(api.<route>.queryOptions(...))` and a write is `useMutation(api.<route>.mutationOptions(...))`.
 
@@ -525,7 +530,7 @@ Items:
 # Summary block for the pull request
 
 ```
-AdonisJS checklist (draft 4)
+AdonisJS checklist (draft <number>)
 Sections run:
 Mechanical checks: all as stated / exceptions:
 Laws failed: none

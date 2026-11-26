@@ -213,6 +213,10 @@ test('list prints slugs only, "all" leaves the tests section out of a code revie
   const listed = report('list', 'application');
   assert.match(listed.stderr, /^Draft /);
   assert.ok(listed.stdout.split('\n').filter(Boolean).every((line) => /^[a-z-]+\/[a-z-]+\t/.test(line)));
+  assert.deepEqual(
+    report('list', 'frontend').stdout.split('\n').filter(Boolean).map((line) => line.split('\t')[0]),
+    ['every-change/vocabulary', 'every-change/lint-format-and-typescript', 'applications/the-frontend-api-client']
+  );
   const run = scratch({ sections: 'all', scope: 'code' });
   try {
     assert.equal(report('prepare', run.runDir).status, 0);
