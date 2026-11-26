@@ -223,14 +223,14 @@ test('the manifest names every item of the checklist once, and no other', () => 
   const manifest = readManifest();
   assert.deepEqual(Object.keys(manifest), [...items.keys()]);
   for (const [id, how] of Object.entries(manifest)) {
-    assert.ok(['lint', 'script', 'planned', 'model', 'guideline'].includes(how), id);
+    assert.ok(['lint', 'script', 'both', 'planned', 'model', 'guideline'].includes(how), id);
     assert.equal(how === 'guideline', items.get(id).tier === 'Guideline', id);
   }
 });
 
-test('an item is marked "script" exactly when a script checks it', () => {
+test('an item is marked "script" or "both" exactly when a script checks it', () => {
   const scripted = Object.entries(readManifest())
-    .filter(([, how]) => how === 'script')
+    .filter(([, how]) => how === 'script' || how === 'both')
     .map(([id]) => id);
   assert.deepEqual(scripted.sort(), [...Object.keys(CHECKS), ...Object.keys(CHECKED_ELSEWHERE)].sort());
   assert.deepEqual(Object.keys(CASES).sort(), Object.keys(CHECKS).sort());
@@ -243,6 +243,58 @@ for (const [id, { kind = 'application', fail, pass }] of Object.entries(CASES)) 
     assert.ok(!itemsFound(checkRepository(scratch(t, { ...base, ...pass }))).includes(id), 'passes');
   });
 }
+
+// Shapes a review of the checks found wrong once. `fails` says what the item's text decides.
+const SHAPES = [
+  ['CFG-2', 'application', false, { 'start/routes.ts': "router.get('/docs/*', () => {})\n/** done */\n" }],
+  ['CFG-2', 'application', true, { 'start/routes.ts': "router.get('/docs/*', () => {})\nconst key = process.env.APP_KEY\n/** done */\n" }],
+  ['CFG-2', 'application', true, { 'bin/server.ts': 'const { PORT } = process.env\n' }],
+  ['IMP-4', 'application', true, { 'commands/app_reset.ts': "import { x } from '../app/services/x.js'\n" }],
+  ['IMP-4', 'application', false, { 'commands/app_reset.ts': "import Base from './_base.js'\n" }],
+  ['CFG-2', 'application', false, { 'bin/test.ts': "delete process.env[key]\nObject.assign(process.env, { PORT: '1' })\n" }],
+  ['DB-9', 'application', true, { 'database/migrations/1_create_posts_table.ts': migration("    t.integer('user_id').references('id').inTable('users').onDelete('CASCADE')\n    t.integer('team_id').references('teams.id')") }],
+  ['EXC-5', 'application', true, {
+    'app/exceptions/base_exception.ts': 'export default abstract class BaseException extends Exception {\n  static status = 400\n}\n',
+    'app/services/billing_service.ts': 'class InvoiceMissing extends BaseException {}\n',
+  }],
+  ['EXC-5', 'application', false, {
+    'app/exceptions/base.ts': 'export default abstract class AppException extends Exception {}\n',
+    'app/exceptions/not_found_exception.ts': 'export default class NotFoundException extends AppException {\n  static status = 404\n}\n',
+  }],
+  ['EXC-7', 'application', true, { 'app/services/a_service.ts': "throw new Exception('x', { code: 'not-found', status: 404 })\n" }],
+  ['CFG-3', 'application', false, { 'config/sentry.ts': "export default { environment: env.get('NODE_ENV') }\n" }],
+  ['CFG-3', 'application', true, { 'app/services/a_service.ts': "if ('production' !== process.env.NODE_ENV) {}\n" }],
+  ['CTL-5', 'application', true, { 'app/controllers/users_controller.ts': 'export default class UsersController {\n  private format = (user: User) => user.name\n}\n' }],
+  ['NAM-1', 'application', true, { 'resources/views/components/UserCard.edge': '' }],
+  ['NAM-1', 'application', false, { 'inertia/vite-env.d.ts': '' }],
+  ['NAM-3', 'application', true, { 'app/services/avatar_service.ts': 'class AvatarService {}\nexport default AvatarService\n' }],
+  ['NAM-3', 'package', true, { 'src/errors.ts': 'export default class ThingException extends Exception {}\n' }],
+  ['DB-10', 'application', true, { 'config/database.ts': 'export default defineConfig({ connections: {\n  pg: { migrations: { disableRollbacksInProduction: true } },\n  mysql: { migrations: {} },\n} })\n' }],
+  ['TST-11', 'application', true, { 'tests/unit/a.spec.ts': "const makeUser = async (\n  name: string,\n  email: string\n) => ({ name, email })\ntest('x', () => {})\n" }],
+  ['TST-11', 'application', false, { 'tests/unit/a.spec.ts': "const LIMIT = (2 + 3) * 4\ntest('x', () => {})\n" }],
+  ['TST-15', 'application', false, { 'package.json': CASES['TST-15'].pass['package.json'], '.env.test': "SESSION_DRIVER='memory'\n" }],
+  ['CMD-1', 'application', false, { 'commands/greet.ts': "export default class extends BaseCommand {\n  static commandName = 'greet'\n  static description = 'Greets'\n}\n" }],
+  ['TOOL-2', 'application', false, { 'package.json': packageJson(APPLICATION, { prettier: undefined }), '.prettierrc': '"@adonisjs/prettier-config"\n' }],
+  ['PKG-1', 'package', true, { 'lib/thing.ts': 'export const x = 1\n' }],
+  ['PKG-6', 'package', false, { 'package.json': packageJson(PACKAGE, { dependencies: { '@adonisjs/presets': '^3.0.0' } }), 'configure.ts': "import { presetLucid } from '@adonisjs/presets/lucid'\n" }],
+  ['PKG-7', 'package', true, { 'package.json': packageJson(PACKAGE, { peerDependencies: { '@adonisjs/core': '>=7.0.0' } }) }],
+  ['PKG-7', 'package', false, { 'package.json': packageJson(PACKAGE, { peerDependencies: { '@adonisjs/core': '^7.0.0 || ^8.0.0' } }) }],
+  ['PKG-43', 'package', false, { 'package.json': packageJson(PACKAGE, { scripts: { test: 'node bin/test.ts', coverage: 'c8 npm test' } }) }],
+  ['IMP-5', 'package', true, { 'src/a.ts': "import './b.js'\n" }],
+  ['IMP-5', 'package', true, { 'package.json': packageJson(PACKAGE, { imports: { '#src/*': './src/*.js' } }) }],
+  ['IMP-1', 'package', false, { 'tests/fixtures/app/adonisrc.ts': '', 'tests/fixtures/app/package.json': json({ type: 'commonjs' }) }],
+];
+SHAPES.forEach(([id, kind, fails, files], index) => {
+  test(`${id} ${fails ? 'fails' : 'passes'} on shape ${index + 1}`, (t) => {
+    const base = kind === 'application' ? APPLICATION : PACKAGE;
+    assert.equal(itemsFound(checkRepository(scratch(t, { ...base, ...files }))).includes(id), fails);
+  });
+});
+
+test('with no package.json at the top, the root files are still required and each root answers for Prettier and Node', (t) => {
+  const result = checkRepository(scratch(t, { 'server/adonisrc.ts': '', 'server/package.json': json({ type: 'module', dependencies: { '@adonisjs/core': '^7.0.0' } }) }));
+  for (const id of ['TOOL-2', 'TOOL-4', 'TOOL-6']) assert.ok(itemsFound(result).includes(id), id);
+});
 
 test('a root is checked as its own kind inside a monorepo', (t) => {
   const result = checkRepository(
@@ -291,6 +343,23 @@ test('a link to an entry the list does not have is an error', (t) => {
   const result = checkRepository(scratch(t, withDeparture('7. **Aligning (#12).** Something.', { entry: 8, item: 'CTL-4' })));
   assert.deepEqual(itemsFound(result), ['CTL-4']);
   assert.match(result.errors[0], /no entry with that number/);
+});
+
+test('a numbered line outside the departures heading is not an entry', (t) => {
+  const files = withDeparture('', { entry: 2, item: 'CTL-4' });
+  files['DECISIONS.md'] = '# Setup\n\n1. Clone\n2. Install\n\n# Departures\n\n1. **Aligning (#9).** Something.\n';
+  files['conventions.config.json'] = json({ departures: { heading: 'Departures', entries: [{ entry: 2, item: 'CTL-4' }] } });
+  const result = checkRepository(scratch(t, files));
+  assert.deepEqual(itemsFound(result), ['CTL-4']);
+  assert.match(result.errors[0], /no entry with that number/);
+});
+
+test('a missing departures list covers nothing', (t) => {
+  const files = withDeparture('', { entry: 7, item: 'CTL-4' });
+  delete files['DECISIONS.md'];
+  const result = checkRepository(scratch(t, files));
+  assert.deepEqual(itemsFound(result), ['CTL-4']);
+  assert.match(result.errors[0], /does not exist/);
 });
 
 test('a link that covers no finding is an error', (t) => {

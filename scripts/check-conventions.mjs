@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // Checks the checklist items that have one right answer, the ones `adonisjs/checks.json` marks
-// "script". The same tree gives the same findings on every run.
+// "script", and the part of each item marked "both" that the files decide. The same tree gives the
+// same findings on every run.
 //
 //   check-conventions           the repository in the current directory
 //   check-conventions --json    the findings as JSON
@@ -15,11 +16,12 @@
 //   {
 //     "departures": {
 //       "file": "DECISIONS.md",
+//       "heading": "Framework departures",
 //       "entries": [{ "entry": 28, "item": "TOOL-2" }, { "entry": 33, "item": "CTL-4", "path": "apps/backend/app/controllers/" }]
 //     }
 //   }
 //
-// The entry must exist in the file as a numbered list entry. For a law it must be marked
+// The entry must exist once in the file as a numbered list entry, under `heading` when one is given. For a law it must be marked
 // **Aligning** and name an issue. A link that covers no finding is itself reported, so an entry
 // does not outlive the code it covered.
 import { execFileSync } from 'node:child_process';
@@ -33,6 +35,12 @@ const MANIFEST = join(HERE, '../adonisjs/checks.json');
 const CONFIG_FILE = 'conventions.config.json';
 const SKIPPED_FOLDERS = new Set(['node_modules', '.git', 'build', 'dist', 'coverage', 'tmp']);
 const SOURCE = /\.(?:ts|tsx|mts)$/;
+// The files NAM-1 names: code and templates, not documentation, data or assets.
+const NAMED = /\.(?:ts|tsx|mts|js|jsx|mjs|cjs|edge|stub)$/;
+// Names a tool prescribes.
+const TOOL_NAMES = new Set(['vite-env.d.ts']);
+// Official packages list this one under `dependencies`.
+const NOT_PEERS = new Set(['@adonisjs/presets']);
 // The framework writes these (LAY-4); no item covers a generated file.
 const GENERATED = ['.adonisjs/', 'database/schema.ts'];
 const DEPENDENCY_LISTS = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
@@ -47,7 +55,7 @@ export function readItems() {
   return items;
 }
 
-/** How each item is checked: lint, script, planned, model or guideline. */
+/** How each item is checked: lint, script, both, planned, model or guideline. */
 export const readManifest = () => JSON.parse(readFileSync(MANIFEST, 'utf8'));
 
 function walk(root, folder = '') {
@@ -77,9 +85,28 @@ function listFiles(root) {
 
 /** Blanks comments and keeps every line break, so a line number still points at the file. */
 function withoutComments(text) {
-  return text
-    .replace(/\/\*[\s\S]*?\*\//g, (block) => block.replace(/[^\n]/g, ' '))
-    .replace(/(^|[\s;{}(),])\/\/.*$/gm, (line, before) => before);
+  let out = '';
+  let quote = null;
+  for (let index = 0; index < text.length; index++) {
+    const char = text[index];
+    if (quote) {
+      out += char;
+      if (char === '\\') out += text[++index] ?? '';
+      else if (char === quote || (char === '\n' && quote !== '`')) quote = null;
+    } else if (char === "'" || char === '"' || char === '`') {
+      quote = char;
+      out += char;
+    } else if (char === '/' && text[index + 1] === '*') {
+      const end = text.indexOf('*/', index + 2);
+      const stop = end === -1 ? text.length : end + 2;
+      out += text.slice(index, stop).replace(/[^\n]/g, ' ');
+      index = stop - 1;
+    } else if (char === '/' && text[index + 1] === '/') {
+      const end = text.indexOf('\n', index);
+      index = (end === -1 ? text.length : end) - 1;
+    } else out += char;
+  }
+  return out;
 }
 
 const lineOf = (text, index) => text.slice(0, index).split('\n').length;
@@ -90,15 +117,18 @@ const pascal = (name) =>
     .map((word) => word[0].toUpperCase() + word.slice(1))
     .join('');
 
-/** The text of a call from its opening parenthesis to the one that closes it. */
-function callText(text, open) {
+/** The text from an opening bracket to the one that closes it. */
+function balanced(text, open) {
+  const pairs = { '(': ')', '{': '}', '[': ']' };
+  const close = pairs[text[open]];
   let depth = 0;
   for (let index = open; index < text.length; index++) {
-    if (text[index] === '(') depth++;
-    else if (text[index] === ')' && --depth === 0) return text.slice(open, index + 1);
+    if (text[index] === text[open]) depth++;
+    else if (text[index] === close && --depth === 0) return text.slice(open, index + 1);
   }
   return text.slice(open);
 }
+const callText = balanced;
 
 /** The lowest Node major a range such as `>=24.0.0` allows, or null when it names none. */
 function lowestMajor(range) {
@@ -189,10 +219,10 @@ export const CHECKS = {
     run(root) {
       const found = [];
       const folders = new Set();
-      for (const path of root.files.filter((file) => SOURCE.test(file))) {
+      for (const path of root.files.filter((file) => NAMED.test(file))) {
         const parts = path.split('/');
         const file = parts.pop();
-        if (!/^_?[a-z0-9_]+(\.[a-z0-9_]+)*$/.test(file)) {
+        if (!TOOL_NAMES.has(file) && !/^_?[a-z0-9_]+(\.[a-z0-9_]+)*$/.test(file)) {
           found.push({ path, line: null, message: 'The file name is not snake_case.' });
         }
         parts.forEach((part, index) => {
@@ -209,30 +239,29 @@ export const CHECKS = {
     kinds: ['application', 'package'],
     run(root) {
       const found = [];
-      const paths = root.files.filter(
-        (path) =>
-          SOURCE.test(path) &&
-          !path.endsWith('.d.ts') &&
-          !path.startsWith('tests/') &&
-          !path.startsWith('inertia/') &&
-          !(root.kind === 'package' && path === 'src/errors.ts')
-      );
+      const paths = root.files.filter((path) => SOURCE.test(path) && !path.endsWith('.d.ts') && !path.startsWith('tests/'));
       for (const path of paths) {
         const code = root.code(path);
         const classes = [...code.matchAll(CLASS)];
+        if (root.kind === 'package' && path === 'src/errors.ts') {
+          for (const match of classes.filter(([, , isDefault]) => isDefault)) {
+            found.push({ path, line: lineOf(code, match.index), message: 'An exception in `src/errors.ts` is a named export.' });
+          }
+          continue;
+        }
         if (classes.length > 1) {
           found.push({ path, line: lineOf(code, classes[1].index), message: 'The file holds more than one class.' });
         }
-        const wantsDefault = DEFAULT_EXPORT_FOLDERS.some((folder) => path.startsWith(folder));
-        const wantsNamed = root.kind === 'application' && path.startsWith('app/services/');
-        for (const [, exported, isDefault] of classes.slice(0, 1)) {
-          if (!exported) continue;
-          if (wantsDefault && !isDefault) {
-            found.push({ path, line: lineOf(code, classes[0].index), message: 'The class is a named export; its folder takes a default export.' });
-          }
-          if (wantsNamed && isDefault) {
-            found.push({ path, line: lineOf(code, classes[0].index), message: 'The service is a default export; a service is a named export.' });
-          }
+        if (classes.length === 0) continue;
+        const [, exported, inlineDefault, name] = classes[0];
+        const isDefault = Boolean(inlineDefault) || new RegExp(`^export default ${name}\\b`, 'm').test(code);
+        const isNamed = (Boolean(exported) && !inlineDefault) || new RegExp(`^export \\{[^}]*\\b${name}\\b`, 'm').test(code);
+        const line = lineOf(code, classes[0].index);
+        if (DEFAULT_EXPORT_FOLDERS.some((folder) => path.startsWith(folder)) && isNamed) {
+          found.push({ path, line, message: 'The class is a named export; its folder takes a default export.' });
+        }
+        if (root.kind === 'application' && path.startsWith('app/services/') && isDefault) {
+          found.push({ path, line, message: 'The service is a default export; a service is a named export.' });
         }
       }
       return found;
@@ -247,31 +276,43 @@ export const CHECKS = {
   },
   'IMP-4': {
     kinds: ['application'],
-    run: (root) =>
-      matches(
+    run: (root) => [
+      ...matches(
         root,
         root.source('app/', 'start/', 'config/', 'providers/'),
         /(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+)['"]\.\.?\//g,
         'A relative import; an application imports through a `#` alias.'
       ),
+      // The kit declares no alias for `commands/`, so a file there imports its neighbour by path.
+      ...matches(
+        root,
+        root.source('commands/', 'database/'),
+        /(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+)['"]\.\.\//g,
+        'A relative import of another folder; an application imports through a `#` alias.'
+      ),
+    ],
   },
   'IMP-5': {
     kinds: ['package'],
     run(root) {
       const found = [];
+      if (Object.keys(root.json('package.json').imports ?? {}).some((key) => key.startsWith('#'))) {
+        found.push({ path: 'package.json', line: null, message: 'It declares a `#` alias under `imports`.' });
+      }
       for (const path of root.files.filter((file) => SOURCE.test(file) && !file.endsWith('.d.ts'))) {
         const code = root.code(path);
-        for (const match of code.matchAll(/\bfrom\s+['"]([^'"]+)['"]/g)) {
+        for (const match of code.matchAll(/(?:\bfrom\s+|\bimport\s+)['"]([^'"]+)['"]/g)) {
           const line = lineOf(code, match.index);
           if (match[1].startsWith('#')) found.push({ path, line, message: 'A `#` alias; a package imports by relative path.' });
           else if (match[1].startsWith('.') && !match[1].endsWith('.ts')) {
             found.push({ path, line, message: 'A static relative import that does not end in `.ts`.' });
           }
         }
-        if (path.startsWith('tests/')) continue;
-        for (const match of code.matchAll(/\bimport\s*\(\s*['"](\.[^'"]*)['"]/g)) {
-          if (!match[1].endsWith('.js')) {
-            found.push({ path, line: lineOf(code, match.index), message: 'A lazy relative `import()` that does not end in `.js`.' });
+        for (const match of code.matchAll(/\bimport\s*\(\s*['"]([.#][^'"]*)['"]/g)) {
+          const line = lineOf(code, match.index);
+          if (match[1].startsWith('#')) found.push({ path, line, message: 'A `#` alias; a package imports by relative path.' });
+          else if (!path.startsWith('tests/') && !match[1].endsWith('.js')) {
+            found.push({ path, line, message: 'A lazy relative `import()` that does not end in `.js`.' });
           }
         }
       }
@@ -280,10 +321,13 @@ export const CHECKS = {
   },
   'TOOL-2': {
     repository: true,
-    run: (root) =>
-      root.json('package.json').prettier === '@adonisjs/prettier-config'
-        ? []
-        : [{ path: 'package.json', line: null, message: '`"prettier"` is not `"@adonisjs/prettier-config"`.' }],
+    run(root) {
+      const preset = '@adonisjs/prettier-config';
+      const declared =
+        (root.has('package.json') && root.json('package.json').prettier === preset) ||
+        ['.prettierrc', '.prettierrc.json'].some((path) => root.has(path) && root.read(path).trim() === `"${preset}"`);
+      return declared ? [] : [{ path: 'package.json', line: null, message: `Prettier is not set to \`"${preset}"\` alone.` }];
+    },
   },
   'TOOL-3': {
     kinds: ['application', 'package'],
@@ -350,12 +394,18 @@ export const CHECKS = {
         /process\.env\b|#start\/env\b/g,
         'Reads `env` or `process.env` outside `config/`.'
       ),
-      ...matches(
-        root,
-        root.source('bin/'),
-        /process\.env(?:\.\w+\b|\[[^\]]+\])(?!\s*=(?!=))/g,
-        'A `bin/` entry point reads a variable from `process.env`.'
-      ),
+      ...root.source('bin/').flatMap((path) => {
+        const code = root.code(path);
+        return [...code.matchAll(/\bprocess\.env\b/g)]
+          .filter((match) => {
+            const before = code.slice(code.lastIndexOf('\n', match.index) + 1, match.index);
+            const after = code.slice(match.index + match[0].length);
+            // Setting or deleting a variable, or handing the whole object on, is not reading one.
+            if (/^(?:\.\w+\b|\[[^\]]+\])\s*=(?!=)/.test(after) || /\bdelete\s+$/.test(before)) return false;
+            return /^[.[]/.test(after) || /(?:=|\.\.\.)\s*$/.test(before);
+          })
+          .map((match) => ({ path, line: lineOf(code, match.index), message: 'A `bin/` entry point reads a variable from `process.env`.' }));
+      }),
     ],
   },
   'CFG-3': {
@@ -364,8 +414,8 @@ export const CHECKS = {
       matches(
         root,
         root.source(...APP_CODE, 'config/').filter((path) => path !== 'start/env.ts'),
-        /env\.get\(\s*['"]NODE_ENV['"]|NODE_ENV['"\])]*\s*[!=]==?/g,
-        'Reads or compares `NODE_ENV`; ask `app.inProduction`, `app.inDev` or `app.inTest`.'
+        /NODE_ENV['"\])]*\s*[!=]==?|[!=]==?\s*(?:process\.env\.NODE_ENV\b|env\.get\(\s*['"]NODE_ENV)/g,
+        'Compares `NODE_ENV`; ask `app.inProduction`, `app.inDev` or `app.inTest`.'
       ),
   },
   'CTL-4': {
@@ -384,7 +434,7 @@ export const CHECKS = {
       matches(
         root,
         root.source('app/controllers/'),
-        /^[ \t]*(?:(?:private|protected)\s+(?:static\s+)?(?:async\s+)?\*?\w+\s*[(<]|(?:static\s+)?(?:async\s+)?#\w+\s*\()/gm,
+        /^[ \t]*(?:(?:private|protected)\s+(?:static\s+)?(?:async\s+)?\*?\w+\s*[(<]|(?:private|protected)\s+(?:static\s+)?(?:readonly\s+)?\w+\s*=\s*(?:async\s*)?(?:\(|function\b|\w+\s*=>)|(?:static\s+)?(?:async\s+)?#\w+\s*\()/gm,
         'A private or protected method in a controller.'
       ),
   },
@@ -442,24 +492,33 @@ export const CHECKS = {
     kinds: ['application'],
     run(root) {
       const found = [];
-      const app = root.source('app/');
-      const extendedSomewhere = new Set(
-        app.flatMap((path) => [...root.code(path).matchAll(/\bextends\s+(\w+)/g)].map((match) => match[1]))
-      );
-      for (const path of app) {
+      const classes = [];
+      for (const path of root.source('app/')) {
         const code = root.code(path);
-        const inFolder = path.startsWith('app/exceptions/');
         for (const match of code.matchAll(/class\s+(\w+)\s+extends\s+(\w+)/g)) {
-          const line = lineOf(code, match.index);
-          if (match[2] === 'Error') found.push({ path, line, message: 'The class extends `Error`, not `Exception`.' });
-          if (match[2] !== 'Exception') continue;
-          if (!inFolder || !path.endsWith('_exception.ts')) {
-            found.push({ path, line, message: 'An exception lives in `app/exceptions/<name>_exception.ts`.' });
-          }
-          if (!/\bstatic\s+(?:readonly\s+)?status\b/.test(code) && !extendedSomewhere.has(match[1])) {
-            found.push({ path, line, message: 'The exception sets no `static status`.' });
-          }
+          classes.push({ path, name: match[1], parent: match[2], line: lineOf(code, match.index), status: /\bstatic\s+(?:readonly\s+)?status\b/.test(code) });
         }
+      }
+      const byName = new Map(classes.map((entry) => [entry.name, entry]));
+      const parents = new Set(classes.map((entry) => entry.parent));
+      // The classes between this one and `Exception`, or null when it is not an exception.
+      const chain = (entry, seen = new Set()) => {
+        if (entry.parent === 'Exception') return [entry];
+        const parent = byName.get(entry.parent);
+        if (!parent || seen.has(parent.name)) return null;
+        const rest = chain(parent, seen.add(entry.name));
+        return rest && [entry, ...rest];
+      };
+      for (const entry of classes) {
+        const { path, line } = entry;
+        if (entry.parent === 'Error') found.push({ path, line, message: 'The class extends `Error`, not `Exception`.' });
+        const ancestors = chain(entry);
+        // A base class that is only extended is not checked.
+        if (!ancestors || parents.has(entry.name)) continue;
+        if (!path.startsWith('app/exceptions/') || !path.endsWith('_exception.ts')) {
+          found.push({ path, line, message: 'An exception lives in `app/exceptions/<name>_exception.ts`.' });
+        }
+        if (!ancestors.some((ancestor) => ancestor.status)) found.push({ path, line, message: 'The exception sets no `static status`.' });
       }
       return found;
     },
@@ -468,12 +527,19 @@ export const CHECKS = {
     kinds: ['application'],
     run(root) {
       const found = [];
-      for (const path of root.source('app/exceptions/')) {
+      const check = (path, code, index, value) => {
+        if (/^E_[A-Z0-9_]+$/.test(value)) return;
+        found.push({ path, line: lineOf(code, index), message: `The code \`${value}\` is not \`E_UPPER_SNAKE\`.` });
+      };
+      for (const path of root.source('app/')) {
         const code = root.code(path);
-        for (const match of code.matchAll(/\bstatic\s+(?:readonly\s+)?code\s*=\s*['"]([^'"]+)['"]/g)) {
-          if (!/^E_[A-Z0-9_]+$/.test(match[1])) {
-            found.push({ path, line: lineOf(code, match.index), message: `The code \`${match[1]}\` is not \`E_UPPER_SNAKE\`.` });
-          }
+        if (path.startsWith('app/exceptions/')) {
+          for (const match of code.matchAll(/\bstatic\s+(?:readonly\s+)?code\s*=\s*['"]([^'"]+)['"]/g)) check(path, code, match.index, match[1]);
+        }
+        for (const match of code.matchAll(/\bnew\s+\w*Exception\s*\(/g)) {
+          const open = match.index + match[0].length - 1;
+          const option = balanced(code, open).match(/\bcode\s*:\s*['"]([^'"]+)['"]/);
+          if (option) check(path, code, open + option.index, option[1]);
         }
       }
       return found;
@@ -506,10 +572,9 @@ export const CHECKS = {
       for (const path of root.source('database/migrations/')) {
         const code = root.code(path);
         for (const match of code.matchAll(/\.references\(/g)) {
-          const start = Math.max(code.lastIndexOf('table.', match.index), 0);
+          // The chain runs to the end of its line and over the lines after it that start with a dot.
           const rest = code.slice(match.index);
-          const end = rest.search(/\n\s*(?:table\.|\}\))/);
-          const statement = code.slice(start, end === -1 ? code.length : match.index + end);
+          const statement = rest.match(/^[^\n]*(?:\n[ \t]*\.[^\n]*)*/)[0];
           const missing = ['.inTable(', '.onDelete('].filter((call) => !statement.includes(call));
           if (missing.length > 0) {
             found.push({ path, line: lineOf(code, match.index), message: `The foreign key has no \`${missing.join('` and no `')}...)\`.` });
@@ -521,14 +586,18 @@ export const CHECKS = {
   },
   'DB-10': {
     kinds: ['application'],
-    run: (root) =>
-      !root.has('config/database.ts') || /disableRollbacksInProduction\s*:\s*true/.test(root.code('config/database.ts'))
+    run(root) {
+      if (!root.has('config/database.ts')) return [];
+      const code = root.code('config/database.ts');
+      const blocks = [...code.matchAll(/\bmigrations\s*:\s*\{/g)].map((match) => balanced(code, match.index + match[0].length - 1));
+      return blocks.length > 0 && blocks.every((text) => /disableRollbacksInProduction\s*:\s*true/.test(text))
         ? []
-        : [{ path: 'config/database.ts', line: null, message: '`disableRollbacksInProduction: true` is not set.' }],
+        : [{ path: 'config/database.ts', line: null, message: '`disableRollbacksInProduction: true` is not set for every connection.' }];
+    },
   },
   'SVC-8': {
     kinds: ['application'],
-    run: (root) => matches(root, root.source('app/', 'providers/', 'start/'), CONSOLE, 'Writes to `console`; log through the logger.'),
+    run: (root) => matches(root, root.source('app/', 'providers/', 'start/', 'database/'), CONSOLE, 'Writes to `console`; log through the logger.'),
   },
   'CMD-1': {
     kinds: ['application'],
@@ -536,7 +605,7 @@ export const CHECKS = {
       const found = [];
       for (const { path, code, name, line } of commandFiles(root)) {
         if (!name) continue;
-        if (!/^export default class \w+ extends \w+/m.test(code)) {
+        if (!/^export default class (?:\w+ )?extends \w+/m.test(code)) {
           found.push({ path, line, message: 'The command is not a default-exported class that extends a command class.' });
         }
         if (!/\bstatic\s+description\b/.test(code)) found.push({ path, line, message: 'The command sets no `static description`.' });
@@ -581,13 +650,23 @@ export const CHECKS = {
   'TST-11': {
     kinds: ['application'],
     run(root) {
-      const specs = root.source('tests/').filter((path) => path.endsWith('.spec.ts') && /\btest(?:\.group)?\(/.test(root.code(path)));
-      return matches(
-        root,
-        specs,
-        /^(?:export\s+)?(?:(?:async\s+)?function\s*\*?\s*\w+|(?:abstract\s+)?class\s+\w+|const\s+\w+\s*(?::[^=\n]+)?=\s*(?:async\s*)?(?:function\b|\([^)\n]*\)\s*(?::[^=\n]+)?=>|\w+\s*=>))/gm,
-        'A function or class declared at the top level of a test file.'
-      );
+      const found = [];
+      const message = 'A function or class declared at the top level of a test file.';
+      for (const path of root.source('tests/').filter((file) => file.endsWith('.spec.ts'))) {
+        const code = root.code(path);
+        if (!/\btest(?:\.group)?\(/.test(code)) continue;
+        for (const match of code.matchAll(/^(?:export\s+)?(?:(?:async\s+)?function\s*\*?\s*\w+|(?:abstract\s+)?class\s+\w+)/gm)) {
+          found.push({ path, line: lineOf(code, match.index), message });
+        }
+        for (const match of code.matchAll(/^(?:export\s+)?const\s+\w+\s*(?::[^=\n]+)?=\s*(?:async\s*)?/gm)) {
+          const after = code.slice(match.index + match[0].length);
+          const arrow = after.startsWith('(')
+            ? /^\s*(?::[^=]+?)?=>/.test(after.slice(balanced(after, 0).length))
+            : /^(?:function\b|\w+\s*=>)/.test(after);
+          if (arrow) found.push({ path, line: lineOf(code, match.index), message });
+        }
+      }
+      return found;
     },
   },
   'TST-12': {
@@ -621,18 +700,26 @@ export const CHECKS = {
     run(root) {
       const pkg = root.json('package.json');
       if (!DEPENDENCY_LISTS.some((list) => pkg[list]?.['@adonisjs/session'])) return [];
-      return root.has('.env.test') && /^SESSION_DRIVER=memory\s*$/m.test(root.read('.env.test'))
+      return root.has('.env.test') && /^SESSION_DRIVER=(['"]?)memory\1\s*$/m.test(root.read('.env.test'))
         ? []
         : [{ path: '.env.test', line: null, message: '`SESSION_DRIVER=memory` is not set.' }];
     },
   },
   'PKG-1': {
     kinds: ['package'],
-    run: (root) =>
-      root.files
-        .filter((path) => !path.includes('/') && SOURCE.test(path) && !path.endsWith('.d.ts'))
-        .filter((path) => !['index.ts', 'configure.ts'].includes(path) && !/\.config\.m?ts$/.test(path))
-        .map((path) => ({ path, line: null, message: 'A source file at the package root that is not `index.ts` or `configure.ts`.' })),
+    run(root) {
+      const source = root.files.filter((path) => SOURCE.test(path) && !path.endsWith('.d.ts'));
+      const allowed = ['src', 'providers', 'services', 'commands', 'stubs', 'factories', 'modules', 'bin', 'tests'];
+      const folders = new Set(source.filter((path) => path.includes('/')).map((path) => path.split('/')[0]));
+      return [
+        ...source
+          .filter((path) => !path.includes('/') && !['index.ts', 'configure.ts'].includes(path) && !/\.config\.m?ts$/.test(path))
+          .map((path) => ({ path, line: null, message: 'A source file at the package root that is not `index.ts` or `configure.ts`.' })),
+        ...[...folders]
+          .filter((folder) => !allowed.includes(folder) && !folder.startsWith('.'))
+          .map((path) => ({ path, line: null, message: 'Source in a root folder that is not `src/` or one of the framework\'s folders.' })),
+      ];
+    },
   },
   'PKG-5': {
     kinds: ['package'],
@@ -644,6 +731,7 @@ export const CHECKS = {
         [pkg.type === 'module', '`"type": "module"` is not set.'],
         [major !== null && major >= 24, '`engines.node` does not require Node 24 or later.'],
         [['build', '!build/bin', '!build/tests'].every((entry) => files.includes(entry)), '`files` does not list `build`, `!build/bin` and `!build/tests`.'],
+        [!files.some((entry) => !entry.startsWith('!') && /(?:^|\/)(?:tests?|bin)(?:\/|$)/.test(entry)), '`files` lists tests or `bin`.'],
         [pkg.exports !== null && typeof pkg.exports === 'object', 'There is no `exports` map.'],
       ]
         .filter(([holds]) => !holds)
@@ -655,7 +743,7 @@ export const CHECKS = {
     run(root) {
       const pkg = root.json('package.json');
       const found = Object.keys(pkg.dependencies ?? {})
-        .filter((name) => name.startsWith('@adonisjs/'))
+        .filter((name) => name.startsWith('@adonisjs/') && !NOT_PEERS.has(name))
         .map((name) => ({ path: 'package.json', line: null, message: `\`${name}\` is under \`dependencies\`.` }));
       const imported = new Set();
       for (const path of root.source(...SHIPPED)) {
@@ -664,6 +752,7 @@ export const CHECKS = {
         }
       }
       imported.delete(pkg.name);
+      for (const name of NOT_PEERS) imported.delete(name);
       for (const name of [...imported].sort()) {
         for (const list of ['peerDependencies', 'devDependencies']) {
           if (!pkg[list]?.[name]) found.push({ path: 'package.json', line: null, message: `\`${name}\` is imported and is not under \`${list}\`.` });
@@ -676,8 +765,8 @@ export const CHECKS = {
     kinds: ['package'],
     run: (root) =>
       Object.entries(root.json('package.json').peerDependencies ?? {})
-        .filter(([, range]) => /^=?\s*\d+\.\d+\.\d+/.test(range))
-        .map(([name, range]) => ({ path: 'package.json', line: null, message: `The peer \`${name}\` is pinned to \`${range}\`.` })),
+        .filter(([, range]) => !range.startsWith('workspace:') && !range.split('||').every((part) => /^\^\d/.test(part.trim())))
+        .map(([name, range]) => ({ path: 'package.json', line: null, message: `The peer range \`${name}: ${range}\` does not name the major with \`^\`.` })),
   },
   'PKG-18': {
     kinds: ['package'],
@@ -723,9 +812,9 @@ export const CHECKS = {
     kinds: ['package'],
     run(root) {
       const pkg = root.json('package.json');
-      return pkg.devDependencies?.c8 && /\bc8\b/.test(pkg.scripts?.test ?? '')
+      return pkg.devDependencies?.c8 && Object.values(pkg.scripts ?? {}).some((script) => /\bc8\b/.test(script))
         ? []
-        : [{ path: 'package.json', line: null, message: 'The `test` script does not collect coverage with `c8`.' }];
+        : [{ path: 'package.json', line: null, message: 'No script collects coverage with `c8`.' }];
     },
   },
   'PKG-47': {
@@ -742,39 +831,48 @@ function readDepartures(repository, items) {
   const path = join(repository, CONFIG_FILE);
   if (!existsSync(path)) return { links: [], errors: [] };
   const config = JSON.parse(readFileSync(path, 'utf8')).departures ?? {};
-  const errors = [];
   const file = config.file ?? 'DECISIONS.md';
-  const text = existsSync(join(repository, file)) ? readFileSync(join(repository, file), 'utf8') : null;
-  if (text === null) errors.push(`${CONFIG_FILE}: the departures list "${file}" does not exist.`);
+  if (!existsSync(join(repository, file))) {
+    return { links: [], errors: [`${CONFIG_FILE}: the departures list "${file}" does not exist.`] };
+  }
+  let text = readFileSync(join(repository, file), 'utf8');
+  const errors = [];
+  if (config.heading) {
+    // Only the section under this heading is the list.
+    const lines = text.split('\n');
+    const start = lines.findIndex((line) => /^#+ /.test(line) && line.replace(/^#+ /, '').trim() === config.heading);
+    if (start === -1) return { links: [], errors: [`${CONFIG_FILE}: "${file}" has no heading "${config.heading}".`] };
+    const level = lines[start].match(/^#+/)[0].length;
+    const length = lines.slice(start + 1).findIndex((line) => new RegExp(`^#{1,${level}} `).test(line));
+    text = lines.slice(start + 1, length === -1 ? undefined : start + 1 + length).join('\n');
+  }
   const links = [];
   for (const link of config.entries ?? []) {
     const label = `${CONFIG_FILE}: entry ${link.entry} for ${link.item}`;
     const item = items.get(link.item);
-    if (!item) {
-      errors.push(`${label}: there is no such item.`);
-      continue;
-    }
-    const entry = text?.match(new RegExp(`^${Number(link.entry)}\\. (.*)$`, 'm'));
-    if (text !== null && !entry) {
-      errors.push(`${label}: "${file}" has no entry with that number.`);
-      continue;
-    }
-    if (entry && item.tier === 'Law' && !/^\*\*Aligning \([^)]*#\d+/.test(entry[1])) {
+    const entries = [...text.matchAll(new RegExp(`^${Number(link.entry)}\\. (.*)$`, 'gm'))];
+    if (!item) errors.push(`${label}: there is no such item.`);
+    else if (entries.length === 0) errors.push(`${label}: "${file}" has no entry with that number.`);
+    else if (entries.length > 1) errors.push(`${label}: "${file}" has more than one entry with that number. Set "heading".`);
+    else if (item.tier === 'Law' && !/^\*\*Aligning \([^)]*#\d+/.test(entries[0][1])) {
       errors.push(`${label}: the item is a law, so the entry must be marked **Aligning** and name an issue.`);
-      continue;
-    }
-    links.push({ entry: Number(link.entry), item: link.item, path: link.path ?? '', used: false });
+    } else links.push({ entry: Number(link.entry), item: link.item, path: link.path ?? '', used: false });
   }
+  // The link with the longest path decides a finding.
+  links.sort((a, b) => b.path.length - a.path.length);
   return { links, errors };
 }
 
 /** Runs every check on the repository and returns its findings, the ones departures cover and the errors. */
 export function checkRepository(repository) {
   const items = readItems();
-  const files = listFiles(repository);
+  let files = listFiles(repository);
   const folders = new Set(files.filter((path) => basename(path) === 'package.json').map((path) => dirname(path)));
+  // An application or a package under a `tests/` folder is a fixture, and is not checked.
+  const fixtures = [...folders].filter((folder) => `/${folder}/`.includes('/tests/'));
   const roots = [];
   for (const folder of [...folders].sort()) {
+    if (fixtures.includes(folder)) continue;
     const prefix = folder === '.' ? '' : `${folder}/`;
     if (files.includes(`${prefix}adonisrc.ts`)) roots.push({ folder, kind: 'application' });
     else {
@@ -782,6 +880,7 @@ export function checkRepository(repository) {
       if (DEPENDENCY_LISTS.some((list) => pkg[list]?.['@adonisjs/core'])) roots.push({ folder, kind: 'package' });
     }
   }
+  files = files.filter((path) => !fixtures.some((folder) => path.startsWith(`${folder}/`)));
   // A file belongs to the deepest root above it.
   const ownerOf = (path) =>
     roots
@@ -796,7 +895,13 @@ export function checkRepository(repository) {
   const top = createRoot(repository, '.', 'repository', files);
   for (const [id, check] of Object.entries(CHECKS)) {
     if (check.repository) {
-      if (roots.length > 0 && top.has('package.json')) add(id, top, check.run(top));
+      // The root of the repository answers. With no `package.json` there, each root answers for itself.
+      if (roots.length === 0) continue;
+      if (id === 'TOOL-6' || top.has('package.json')) add(id, top, check.run(top));
+      else for (const { folder, kind } of roots) {
+        const root = createRoot(repository, folder, kind, files);
+        add(id, root, check.run(root));
+      }
       continue;
     }
     for (const { folder, kind } of roots) {

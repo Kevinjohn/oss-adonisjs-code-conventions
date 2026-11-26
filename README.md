@@ -53,6 +53,7 @@ Run it from the root of the repository to check. It finds each application and p
 | --- | --- |
 | `lint` | The official ESLint preset. A passing `lint` script is the answer. |
 | `script` | `check-conventions`, or `check-terminology` for VOC-2. |
+| `both` | `check-conventions` for what the files decide, and a reviewer for the rest. |
 | `planned` | A reviewer, until a script check is written for it. |
 | `model` | A reviewer. The item needs the code to be read. |
 | `guideline` | A reviewer, as a note. It never blocks. |
@@ -65,12 +66,15 @@ entry of that list:
 {
   "departures": {
     "file": "DECISIONS.md",
+    "heading": "Framework departures",
     "entries": [{ "entry": 28, "item": "TOOL-2" }, { "entry": 25, "item": "CTL-4", "path": "app/controllers/" }]
   }
 }
 ```
 
-- The entry must exist in the file. For a law it must be marked **Aligning** and name an issue.
+- The entry must exist in the file, once, under `heading` when one is given. For a law it must be
+  marked **Aligning** and name an issue.
+- When two links fit a finding, the one with the longer `path` covers it.
 - A link that covers no finding is an error, so an entry does not outlive the code it covered.
 
 ## The terminology check

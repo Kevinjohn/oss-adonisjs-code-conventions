@@ -121,9 +121,12 @@ function parseChecklist() {
   // A mechanical check for items no reviewer has is not run.
   for (const each of sections) {
     const reviewed = new Set(each.items.map((entry) => entry.id));
-    each.checks = each.checks.filter(
-      (check) => check.items.length === 0 || check.items.some((id) => reviewed.has(id))
+    const dropped = each.checks.filter(
+      (check) => check.items.length > 0 && !check.items.some((id) => reviewed.has(id))
     );
+    each.checks = each.checks.filter((check) => !dropped.includes(check));
+    each.text = each.text.filter((line) => !dropped.some((check) => line === `- [ ] ${check.text}`));
+    each.partly = each.items.filter((entry) => manifest[entry.id] === 'both').map((entry) => entry.id);
   }
   return { draft, sections };
 }
@@ -521,8 +524,10 @@ function build(runDir, previousPath) {
   const previous = previousPath ? readJson(previousPath, errors) : null;
   if (errors.length > 0) fail(errors);
   const now = new Set(findings.map((entry) => entry.key));
+  // A finding of an item this review no longer has is not resolved by its absence.
+  const reviewed = new Set(parseChecklist().sections.flatMap((section) => section.items.map((item) => item.id)));
   const resolved = (previous?.findings ?? []).filter(
-    (entry) => !now.has(entry.key) && run.sections.includes(entry.section)
+    (entry) => !now.has(entry.key) && run.sections.includes(entry.section) && reviewed.has(entry.item)
   );
 
   const open = findings.filter((entry) => entry.departure === null);
@@ -664,6 +669,11 @@ if (command === 'list') {
   const section = parseChecklist().sections.find((candidate) => candidate.slug === args[0]);
   if (!section) fail([`No section "${args[0]}". Run "list" for the slugs.`]);
   console.log(section.text.join('\n').trim());
+  if (section.partly.length > 0) {
+    console.log(
+      `\nChecked in part by \`check-conventions\`: ${section.partly.join(', ')}. Report only what a script cannot see in the files.`
+    );
+  }
   if (section.checked.length > 0) {
     console.log(
       `\nNot reviewed here: ${section.checked.map((item) => item.id).join(', ')}. The \`lint\` script or \`check-conventions\` decides them.`
