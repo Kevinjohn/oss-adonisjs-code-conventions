@@ -1,6 +1,6 @@
 # AdonisJS cookbook
 
-Draft 7, 2026-11-25. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
+Draft 8, 2026-11-26. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
 and Tuyau 1.
 
 This is the coding guidebook for every AdonisJS repository we own: applications, and the
@@ -106,7 +106,7 @@ and **logout** (the framework's words for starting and ending a session).
   `@unicorn/filename-case`. A name a tool or a platform prescribes (`README.md`, `LICENSE`, a tool's configuration file) keeps its spelling. Documentation and asset files are not covered.
 - **NAM-2 (F)** Classes and types are PascalCase. Interfaces have no `I` prefix. Variables and
   functions are camelCase; constants may be UPPER_CASE. A variable that holds a class is PascalCase: `const { default: User } = await import('#models/user')`.
-- **NAM-3 (F)** A file that holds a class holds one class, and exports it as the generator does: a default export for a controller, model, middleware, exception, event, listener, mail, policy, transformer, provider, seeder and command; a named export for a service (`export class AvatarService`). Validators, factories and config helpers are named exports. In a package, `src/errors.ts` holds every exception class as a named export (PKG-31).
+- **NAM-3 (F)** A file that holds a class holds one class, and exports it as the generator does: a default export for a controller, model, middleware, exception, event, listener, mail, policy, transformer, provider, seeder and command; a named export for a service (`export class AvatarService`). Validators, factories and config helpers are named exports. In a package, `src/errors.ts` holds every exception class as a named export (PKG-31). The kit's `providers/api_provider.ts` holds a serializer class and exports nothing, and passes.
 - **NAM-4 (F)** Create a file with its generator (`node ace make:*`), so the name, suffix and folder
   are the framework's.
 
@@ -132,7 +132,7 @@ and **logout** (the framework's words for starting and ending a session).
 - **TOOL-3 (F)** `tsconfig.json` extends `@adonisjs/tsconfig/tsconfig.app.json` in an application
   and `@adonisjs/tsconfig/tsconfig.package.json` in a package.
 - **TOOL-4 (H)** Node is version 24 or later, declared under `engines`. The framework requires it;
-  the package starter kit declares it.
+  the package starter kit declares it. In a workspace the root `package.json` declares it, as the monorepo starter kit does.
 - **TOOL-5 (F)** Script names are the starter kit's: `dev`, `build`, `start`, `test`, `lint`,
   `format`, `typecheck`, plus `codegen` in a monorepo backend and `compile`, `quick:test` and
   `release` in a package. A script outside this list may be added.
@@ -140,7 +140,7 @@ and **logout** (the framework's words for starting and ending a session).
 - **TOOL-7 (P)** Return early. Check each condition that ends the work at the top of the function;
   do not wrap the main logic in an `if`.
 - **TOOL-8 (H)** Private state in a class is a `#field` or `#method`. Use `protected` only for a
-  member a subclass or the framework reads. A `protected` member no subclass in the repository reads needs the class documented as one to extend.
+  member a subclass or the framework reads. A `protected` member no subclass in the repository reads needs the class documented as one to extend. A provider's `constructor(protected app: ApplicationService)`, as `make:provider` writes it, passes.
 
 ---
 
@@ -177,7 +177,7 @@ adonisrc.ts       the application manifest
 - **LAY-1 (F)** A new kind of file goes in the framework's folder for it. Create the folder when the
   first file needs it and add its `#` alias in the same change.
 - **LAY-2 (F)** A framework folder holds only its own kind of file. `app/models` holds models.
-  `start/` holds `env.ts` and files imported while the application boots.
+  `start/` holds `env.ts` and files imported while the application boots. `bin/` holds the entry points.
 - **LAY-3 (H)** No catch-all folders (`utils/`, `helpers/`, `lib/`) under `app/`. Group by domain
   inside a framework folder: `app/services/billing/`.
 - **LAY-4 (F)** `.adonisjs/` and `database/schema.ts` are generated. Never edit them. Regenerate
@@ -245,18 +245,18 @@ The alias set, from the `api-monorepo` kit:
 
 - **CFG-1 (F)** Every environment variable is declared and validated in `start/env.ts`. A secret
   uses `Env.schema.secret()`.
-- **CFG-2 (F)** Only `config/` files read the `env` service. Controllers, middleware, services and models read configuration, never `env` and never `process.env`. Setting `process.env.NODE_ENV` in a `bin/` entry point, as the generated `bin/test.ts` does, is not reading it.
+- **CFG-2 (F)** Only `config/` files read the `env` service. Controllers, middleware, services and models read configuration, never `env` and never `process.env`. Setting `process.env.NODE_ENV` in a `bin/` entry point, as the generated `bin/test.ts` does, is not reading it. A `bin/` entry point reads no variable from `process.env`.
 - **CFG-3 (F)** Ask the application for its state with `app.inProduction`, `app.inDev` and
   `app.inTest`. Do not compare `NODE_ENV`.
 - **CFG-4 (F)** A `config/` file imports `env`, framework helpers and the package's `defineConfig`,
-  and default-exports the result. It does not import application code.
+  and default-exports the result. It does not import application code. A value exported by name, as `appUrl` and `http` are in the kit's `config/app.ts`, needs no default export.
 - **CFG-5 (F)** A config file that defines a named list (mailers, hash drivers, limiter stores,
   guards) carries the `declare module` block that types it.
 - **CFG-6 (F)** `adonisrc.ts` is environment-agnostic: no `process.env`, no logic. `providers`,
   `preloads` and `commands` are lazy imports. A provider or preload that belongs to some
   environments says so with `{ file, environment }`.
 - **CFG-7 (F)** Resolve paths with `app.makePath()`, `app.publicPath()`, `app.tmpPath()` and
-  `app.configPath()`.
+  `app.configPath()`. A `bin/` entry point runs before `app` exists and resolves from `import.meta.url`, as the generated `APP_ROOT` does.
 - **CFG-8 (F)** `.env.example` lists every variable with a placeholder, never a real secret. Values for tests are in `.env.test`.
 - **CFG-9 (H)** A product's own variables share one prefix (`MYAPP_`). Framework variables keep the
   framework's names (`APP_KEY`, `PORT`, `HOST`, `LOG_LEVEL`).
@@ -681,7 +681,7 @@ export default class extends BaseSchema {
   export.
 - **SVC-2 (F)** The container builds a service: a controller or another service takes it through the constructor with `@inject()`, an Ace command through an `@inject()` `run` method, and code with no constructor to inject into through `app.container.make`. Nothing under `app/` calls `new` on a service.
 - **SVC-3 (F)** A service does not read the HTTP context unless it is injected with it. Prefer
-  passing the values it needs.
+  passing the values it needs. A context passed to it as an argument counts as injected.
 - **SVC-4 (F)** Replace a service in a test with the test context's `swap(Service, fake)`, which
   restores itself.
 - **SVC-5 (P)** Under `app/`, behaviour that has state, does I/O or takes a dependency is a class method. An exported function is a factory that builds and returns an instance, or a pure function, which takes every input as an argument, awaits nothing and reads no module-level variable. A constant is not a variable (PKG-35).
@@ -733,7 +733,7 @@ export default class UsersController {
 - **AUT-7 (F)** An action authorizes with `bouncer.with(PostPolicy).authorize('edit', post)`, or
   `.denies()` when it answers itself.
 - **AUT-8 (F)** Hash with the `hash` service; encrypt with the `encryption` service. No custom
-  hashing.
+  hashing. A `node:crypto` digest of a value that is not a password, such as a fingerprint or a lookup key, is not custom hashing: `@adonisjs/auth` stores a SHA-256 digest of each token.
 - **AUT-9 (H)** Every route that is not public is authorized on the server: by middleware on the route or its group, or by a check in the action or the service it calls. A hidden button is not authorization.
 
 Recipe (documentation):
@@ -793,7 +793,7 @@ export const throttle = limiter.define('global', () => {
   `#generated/listeners` barrel files.
 - **OPS-6 (F)** Health checks are registered in `start/health.ts` as `healthChecks`. A
   `HealthChecksController` serves `/health/live` and `/health/ready`. A custom check extends
-  `BaseCheck` and its name ends in `Check`.
+  `BaseCheck` and its class name ends in `Check`.
 - **OPS-7 (F)** Listeners are referenced lazily through the barrel file; a static listener import in
   `start/events.ts` is a lint error (`@adonisjs/prefer-lazy-listener-import`).
 
@@ -843,7 +843,7 @@ export default class HealthChecksController {
 ## Ace commands
 
 - **CMD-1 (F)** A command is a default-exported class in `commands/` that extends `BaseCommand` and
-  sets `static commandName` and `static description`.
+  sets `static commandName` and `static description`. A base class that commands share is a default export in a file whose name starts with `_`, which Ace does not load, as Lucid's `commands/migration/_base.ts` is. A command that extends it extends `BaseCommand`.
 - **CMD-2 (F)** A grouped command is named `namespace:action`. The name has one colon, as every command of the framework has.
 - **CMD-3 (F)** A command that touches models or services sets
   `static options = { startApp: true }`.
