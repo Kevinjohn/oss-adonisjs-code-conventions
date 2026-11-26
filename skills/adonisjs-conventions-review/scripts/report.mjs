@@ -22,6 +22,9 @@ import { fileURLToPath } from 'node:url';
 const REPOSITORY = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const CHECKLIST_PATH = join(REPOSITORY, 'adonisjs/checklist.md');
 const COOKBOOK_PATH = join(REPOSITORY, 'adonisjs/cookbook.md');
+const MANIFEST_PATH = join(REPOSITORY, 'adonisjs/checks.json');
+// An item that lint or a script decides is not given to a reviewer.
+const NOT_REVIEWED = new Set(['lint', 'script']);
 const TERMINOLOGY_CHECK = join(REPOSITORY, 'scripts/check-terminology.mjs');
 const PART_KINDS = { 1: ['application', 'package'], 2: ['application'], 3: ['package'] };
 // A separate frontend package is not server code: the checklist covers it in these sections only.
@@ -69,6 +72,7 @@ const fileOf = (slug) => `${slug.replace('/', '--')}.json`;
 function parseChecklist() {
   const lines = readFileSync(CHECKLIST_PATH, 'utf8').split('\n');
   const draft = lines.find((line) => line.startsWith('Draft '))?.match(/^Draft [^.]+/)?.[0] ?? '';
+  const manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
   const sections = [];
   let part = null;
   let section = null;
@@ -93,6 +97,7 @@ function parseChecklist() {
         kinds: [],
         when: '',
         items: [],
+        checked: [],
         checks: [],
         text: [],
       };
@@ -102,12 +107,26 @@ function parseChecklist() {
       sections.push(section);
     }
     if (!section) continue;
+    const item = line.match(/^- \[ \] \*\*([A-Z]+-\d+)\*\* \((Law|Rule|Guideline)\) (.+)$/);
+    if (item && NOT_REVIEWED.has(manifest[item[1]])) {
+      section.checked.push({ id: item[1], tier: item[2], text: item[3] });
+      continue;
+    }
     if (line !== '---') section.text.push(line);
     const when = line.match(/^\*When:\* (.+)$/);
     if (when) section.when = when[1];
-    const item = line.match(/^- \[ \] \*\*([A-Z]+-\d+)\*\* \((Law|Rule|Guideline)\) (.+)$/);
     if (item) section.items.push({ id: item[1], tier: item[2], text: item[3] });
     else if (line.startsWith('- [ ] ')) section.checks.push(parseCheck(line.slice(6)));
+  }
+  // A mechanical check for items no reviewer has is not run.
+  for (const each of sections) {
+    const reviewed = new Set(each.items.map((entry) => entry.id));
+    const dropped = each.checks.filter(
+      (check) => check.items.length > 0 && !check.items.some((id) => reviewed.has(id))
+    );
+    each.checks = each.checks.filter((check) => !dropped.includes(check));
+    each.text = each.text.filter((line) => !dropped.some((check) => line === `- [ ] ${check.text}`));
+    each.partly = each.items.filter((entry) => manifest[entry.id] === 'both').map((entry) => entry.id);
   }
   return { draft, sections };
 }
@@ -137,7 +156,7 @@ function cookbookEntry(id) {
 function citedBy(item, sections) {
   const text = `${item.text} ${cookbookEntry(item.id)}`;
   return sections
-    .flatMap((section) => section.items)
+    .flatMap((section) => [...section.items, ...section.checked])
     .filter((other) => other.id !== item.id && new RegExp(`\\b${other.id}\\b`).test(text));
 }
 
@@ -505,8 +524,10 @@ function build(runDir, previousPath) {
   const previous = previousPath ? readJson(previousPath, errors) : null;
   if (errors.length > 0) fail(errors);
   const now = new Set(findings.map((entry) => entry.key));
+  // A finding of an item this review no longer has is not resolved by its absence.
+  const reviewed = new Set(parseChecklist().sections.flatMap((section) => section.items.map((item) => item.id)));
   const resolved = (previous?.findings ?? []).filter(
-    (entry) => !now.has(entry.key) && run.sections.includes(entry.section)
+    (entry) => !now.has(entry.key) && run.sections.includes(entry.section) && reviewed.has(entry.item)
   );
 
   const open = findings.filter((entry) => entry.departure === null);
@@ -648,9 +669,19 @@ if (command === 'list') {
   const section = parseChecklist().sections.find((candidate) => candidate.slug === args[0]);
   if (!section) fail([`No section "${args[0]}". Run "list" for the slugs.`]);
   console.log(section.text.join('\n').trim());
+  if (section.partly.length > 0) {
+    console.log(
+      `\nChecked in part by \`check-conventions\`: ${section.partly.join(', ')}. Report only what a script cannot see in the files.`
+    );
+  }
+  if (section.checked.length > 0) {
+    console.log(
+      `\nNot reviewed here: ${section.checked.map((item) => item.id).join(', ')}. The \`lint\` script or \`check-conventions\` decides them.`
+    );
+  }
 } else if (command === 'item' && args[0]) {
   const { sections } = parseChecklist();
-  const item = sections.flatMap((section) => section.items).find((candidate) => candidate.id === args[0]);
+  const item = sections.flatMap((section) => [...section.items, ...section.checked]).find((candidate) => candidate.id === args[0]);
   if (!item) fail([`No item "${args[0]}".`]);
   console.log(`${item.id} (${item.tier}) ${item.text}\n\nCookbook: ${cookbookEntry(item.id) || 'no entry'}`);
   for (const cited of citedBy(item, sections)) {

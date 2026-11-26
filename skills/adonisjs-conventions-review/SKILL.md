@@ -13,6 +13,9 @@ The checklist and its procedure are in the repository this skill belongs to. Fin
 `realpath` on this skill's folder: the repository root is two folders up. From there:
 
 - `adonisjs/checklist.md`: the items. Never work from a copy or from memory.
+- `adonisjs/checks.json`: how each item is checked. An item marked `lint` or `script` is decided
+  by the `lint` script or by `scripts/check-conventions.mjs`, not by this review: the script leaves
+  it out of every section, and a reviewer writes no result and no finding for it.
 - `workflow.md`: the tiers, when n/a is valid, how to read an item, departures. Read it before the
   first review.
 - `skills/adonisjs-conventions-review/scripts/report.mjs`: called `report` below. Run it with `node`.

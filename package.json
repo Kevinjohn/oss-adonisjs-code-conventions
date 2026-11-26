@@ -5,13 +5,15 @@
   "description": "Code conventions for AdonisJS applications and packages, with the checks that enforce them.",
   "type": "module",
   "bin": {
+    "check-conventions": "./scripts/check-conventions.mjs",
     "check-terminology": "./scripts/check-terminology.mjs"
   },
   "exports": {
+    "./check-conventions": "./scripts/check-conventions.mjs",
     "./check-terminology": "./scripts/check-terminology.mjs"
   },
   "scripts": {
-    "test": "node --test scripts/check-terminology.test.mjs skills/adonisjs-conventions-review/scripts/report.test.mjs"
+    "test": "node --test scripts/check-conventions.test.mjs scripts/check-terminology.test.mjs skills/adonisjs-conventions-review/scripts/report.test.mjs"
   },
   "engines": {
     "node": ">=22"

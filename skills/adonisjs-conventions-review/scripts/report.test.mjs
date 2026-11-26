@@ -10,8 +10,8 @@ const script = fileURLToPath(new URL('./report.mjs', import.meta.url));
 const report = (...args) => spawnSync(process.execPath, [script, ...args], { encoding: 'utf8' });
 const SECTION = 'applications/controllers';
 const CONTROLLER = 'app/controllers/posts_controller.ts';
-const ITEMS = ['CTL-1', 'CTL-2', 'CTL-3', 'CTL-4', 'CTL-5', 'CTL-6', 'CTL-7', 'CTL-8', 'CTL-9', 'CTL-10'];
-const SENTENCE = 'An action destructures what it uses from the HTTP context';
+const ITEMS = ['CTL-1', 'CTL-2', 'CTL-3', 'CTL-6', 'CTL-7', 'CTL-8', 'CTL-9', 'CTL-10'];
+const SENTENCE = 'A controller does not catch an exception to answer with an error';
 
 /** A scratch application, committed, with a run folder beside it. */
 function scratch(run = {}) {
@@ -20,11 +20,11 @@ function scratch(run = {}) {
     mkdirSync(dirname(join(root, path)), { recursive: true });
     writeFileSync(join(root, path), text);
   };
-  write(CONTROLLER, 'export default class PostsController {\n  async store(ctx: HttpContext) {\n    return ctx\n  }\n}\n');
-  write('examples/app/controllers/demo_controller.ts', '  async store(ctx: HttpContext) {}\n');
-  write('build/app/controllers/built_controller.ts', '  async store(ctx: HttpContext) {}\n');
-  write('user-stories/sign_in.md', 'async store(ctx: HttpContext) {\n');
-  write('public/index.html', '<p>async store(ctx: HttpContext) {</p>\n');
+  write(CONTROLLER, 'export default class PostsController {\n  try {\n    return ctx\n  }\n}\n');
+  write('examples/app/controllers/demo_controller.ts', '  try {}\n');
+  write('build/app/controllers/built_controller.ts', '  try {}\n');
+  write('user-stories/sign_in.md', 'try {\n');
+  write('public/index.html', '<p>try {</p>\n');
   const git = (...args) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.com', ...args], { cwd: root });
   git('init', '-q');
   git('add', '-A');
@@ -35,13 +35,13 @@ function scratch(run = {}) {
   return { root, runDir, write, git, clean: () => [root, runDir].forEach((dir) => rmSync(dir, { recursive: true })) };
 }
 
-/** A record that fails CTL-4 on the scratch controller and passes the rest. */
+/** A record that fails CTL-6 on the scratch controller and passes the rest. */
 function record(overrides = {}) {
   return {
     reviewer: 'reviewer-a',
     files_read: [CONTROLLER],
-    items: ITEMS.map((item) => ({ item, result: item === 'CTL-4' ? 'fail' : 'pass' })),
-    findings: [{ item: 'CTL-4', path: CONTROLLER, line: 9, sentence: SENTENCE, code: '  async store(ctx: HttpContext) {' }],
+    items: ITEMS.map((item) => ({ item, result: item === 'CTL-6' ? 'fail' : 'pass' })),
+    findings: [{ item: 'CTL-6', path: CONTROLLER, line: 9, sentence: SENTENCE, code: '  try {' }],
     ...overrides,
   };
 }
@@ -55,10 +55,10 @@ test('prepare leaves example and output folders out, and takes them back by name
   try {
     assert.equal(report('prepare', run.runDir).status, 0);
     assert.deepEqual(readOut(run.runDir, 'files.json'), { files: [CONTROLLER], excluded: 4, changed: null });
-    const [, check] = readOut(run.runDir, 'checks/applications--controllers.json');
-    assert.deepEqual(check.items, ['CTL-4']);
+    const [check] = readOut(run.runDir, 'checks/applications--controllers.json');
+    assert.deepEqual(check.items, ['CTL-6']);
     assert.equal(check.result, 'output');
-    assert.deepEqual(check.lines, [`${CONTROLLER}:2:  async store(ctx: HttpContext) {`]);
+    assert.deepEqual(check.lines, [`${CONTROLLER}:2:  try {`]);
     writeFileSync(join(run.runDir, 'run.json'), JSON.stringify({ ...readOut(run.runDir, 'run.json'), include: ['examples/'] }));
     report('prepare', run.runDir);
     assert.equal(readOut(run.runDir, 'files.json').files.length, 2);
@@ -85,7 +85,7 @@ test('build corrects the line, asks for verification and then counts a verified 
     assert.match(readFileSync(join(run.runDir, 'report.md'), 'utf8'), /1 item\(s\) failing at 1 place\(s\)/);
     assert.equal(existsSync(join(run.runDir, 'verify.json')), false);
     assert.equal(readOut(run.runDir, 'findings.json').findings[0].line, 2);
-    assert.match(readOut(run.runDir, 'findings.json').findings[0].key, /^CTL-4:[0-9a-f]{8}$/);
+    assert.match(readOut(run.runDir, 'findings.json').findings[0].key, /^CTL-6:[0-9a-f]{8}$/);
   } finally {
     run.clean();
   }
@@ -105,7 +105,7 @@ test('build refuses records that break a rule of the review', () => {
     refused(record({ reviewer: '' }), /"reviewer" is missing/);
     refused(record({ checks: [] }), /the script records the checks/);
     refused(record({ items: record().items.slice(1) }), /CTL-1 has no result/);
-    refused(record({ findings: [] }), /CTL-4: a fail needs at least one finding/);
+    refused(record({ findings: [] }), /CTL-6: a fail needs at least one finding/);
     refused(record({ findings: [{ ...finding, sentence: 'made up' }] }), /not a quote from the item/);
     refused(record({ findings: [{ ...finding, code: 'not there' }] }), /is not in the file/);
     refused(
@@ -128,12 +128,12 @@ test('build refuses records that break a rule of the review', () => {
     );
     refused(
       record({ items: ITEMS.map((item) => ({ item, result: 'pass' })), findings: [] }),
-      /CTL-4: it passes while its check printed 1 line/
+      /CTL-6: it passes while its check printed 1 line/
     );
     const twice = { item: 'CTL-1', path: CONTROLLER, sentence: 'A controller maps HTTP to the application', code: 'return ctx' };
     refused(
       record({
-        items: ITEMS.map((item) => ({ item, result: ['CTL-1', 'CTL-4'].includes(item) ? 'fail' : 'pass' })),
+        items: ITEMS.map((item) => ({ item, result: ['CTL-1', 'CTL-6'].includes(item) ? 'fail' : 'pass' })),
         findings: [finding, twice, twice],
       }),
       /CTL-1: a guideline is noted once/
@@ -146,7 +146,7 @@ test('build refuses records that break a rule of the review', () => {
 test('with a diff, only changed files are in scope and a finding must be on a changed line', () => {
   const run = scratch({ diff: 'HEAD~1' });
   try {
-    run.write('app/controllers/tags_controller.ts', 'export default class TagsController {\n  async store(ctx: HttpContext) {}\n}\n');
+    run.write('app/controllers/tags_controller.ts', 'export default class TagsController {\n  try {}\n}\n');
     run.git('add', '-A');
     run.git('commit', '-q', '-m', 'second');
     report('prepare', run.runDir);
@@ -175,7 +175,7 @@ test('unclear cases become an issue body and a previous run lists what is resolv
     writeRecord(
       run.runDir,
       record({
-        items: ITEMS.map((item) => ({ item, result: 'pass', reason: item === 'CTL-4' ? 'checked by hand' : '' })),
+        items: ITEMS.map((item) => ({ item, result: 'pass', reason: item === 'CTL-6' ? 'checked by hand' : '' })),
         findings: [],
         unclear: [{ item: 'CTL-7', path: CONTROLLER, question: 'Does this count?', read: [] }],
       })

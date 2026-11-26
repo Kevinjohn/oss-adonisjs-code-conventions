@@ -22,7 +22,7 @@ belongs to no product. A repository adopts it by linking here from its
 [skills/adonisjs-conventions-review](./skills/adonisjs-conventions-review/SKILL.md) reviews a
 repository, or a folder in one, against the AdonisJS checklist and writes the findings as
 `findings.json` and `report.md`. It is read-only: it reports, and does not fix. It can review only
-the lines a branch changed. Example code, build output, Markdown and HTML are left out unless the request
+the lines a branch changed. It leaves out the items that lint or the conventions check decides. Example code, build output, Markdown and HTML are left out unless the request
 names them.
 
 Install it by linking the folder into the skills folder your agent reads, from a checkout of this
@@ -35,6 +35,48 @@ ln -s "$(pwd)/skills/adonisjs-conventions-review" ~/.agents/skills/adonisjs-conv
 Then ask for it: "review `app/controllers` against the AdonisJS conventions, code only, sections
 applications/controllers and applications/validators".
 
+## The conventions check
+
+`scripts/check-conventions.mjs` checks the items that have one right answer: a file name, a
+folder, an export form, a key in `package.json`. The same tree gives the same findings on every
+run, so the count only falls as the code is fixed.
+
+```bash
+node /path/to/this/repository/scripts/check-conventions.mjs
+```
+
+Run it from the root of the repository to check. It finds each application and package in it.
+
+[adonisjs/checks.json](./adonisjs/checks.json) says how every item is checked:
+
+| Value | Who decides the item |
+| --- | --- |
+| `lint` | The official ESLint preset. A passing `lint` script is the answer. |
+| `script` | `check-conventions`, or `check-terminology` for VOC-2. |
+| `both` | `check-conventions` for what the files decide, and a reviewer for the rest. |
+| `planned` | A reviewer, until a script check is written for it. |
+| `model` | A reviewer. The item needs the code to be read. |
+| `guideline` | A reviewer, as a note. It never blocks. |
+
+A finding stays open until the code changes or the repository's departures list covers it. A
+`conventions.config.json` at the root of the checked repository links a finding to a numbered
+entry of that list:
+
+```json
+{
+  "departures": {
+    "file": "DECISIONS.md",
+    "heading": "Framework departures",
+    "entries": [{ "entry": 28, "item": "TOOL-2" }, { "entry": 25, "item": "CTL-4", "path": "app/controllers/" }]
+  }
+}
+```
+
+- The entry must exist in the file, once, under `heading` when one is given. For a law it must be
+  marked **Aligning** and name an issue.
+- When two links fit a finding, the one with the longer `path` covers it.
+- A link that covers no finding is an error, so an entry does not outlive the code it covered.
+
 ## The terminology check
 
 `scripts/check-terminology.mjs` fails on a rejected synonym in a file name or in the text of a
@@ -45,8 +87,8 @@ and, when the checked repository has one, the same table in that repository's ow
 node /path/to/this/repository/scripts/check-terminology.mjs
 ```
 
-Run it from the root of the repository to check. `npm test` here runs the tests of the check and
-of the review skill's script.
+Run it from the root of the repository to check. `npm test` here runs the tests of both checks
+and of the review skill's script.
 
 ## What a repository keeps for itself
 
