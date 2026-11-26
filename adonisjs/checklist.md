@@ -1,6 +1,6 @@
 # AdonisJS pre-PR checklist
 
-Draft 14, 2026-11-26. The working half of the [AdonisJS cookbook](./cookbook.md): every
+Draft 15, 2026-11-26. The working half of the [AdonisJS cookbook](./cookbook.md): every
 rule in it, as a check. The cookbook holds the reasons, the origin of each rule, the vocabulary
 table and the recipes. The rule id is the same in both; the tier and the wording that is checked
 are here.
@@ -57,7 +57,7 @@ Items:
 
 *When:* Every change.
 
-- [ ] **NAM-1** (Law) Files and folders are `snake_case`. The official ESLint preset enforces it with `@unicorn/filename-case`. A name a tool or a platform prescribes (`README.md`, `LICENSE`, a tool's configuration file) keeps its spelling. Documentation and asset files are not covered.
+- [ ] **NAM-1** (Law) Files and folders are `snake_case`. The official ESLint preset enforces it with `@unicorn/filename-case`. A name a tool or a platform prescribes (`README.md`, `LICENSE.md`, a tool's configuration file) keeps its spelling. Documentation and asset files are not covered.
 - [ ] **NAM-2** (Law) Classes and types are PascalCase. Interfaces have no `I` prefix. Variables and functions are camelCase; constants may be UPPER_CASE. A variable that holds a class is PascalCase: `const { default: User } = await import('#models/user')`. A React component, and a variable that holds one, is PascalCase, as the React starter kit exports `Login` from `inertia/pages/auth/login.tsx`. A parameter is not checked.
 - [ ] **NAM-3** (Law) A file that holds a class holds one class, and exports it as the generator does: a default export for a controller, model, middleware, exception, event, listener, mail, policy, transformer, provider, seeder and command; a named export for a service (`export class AvatarService`). Validators, factories and config helpers are named exports. In a package, `src/errors.ts` holds every exception class as a named export (PKG-31). The kit's `providers/api_provider.ts` holds a serializer class and exports nothing, and passes. A class declared inside a test or a test group is not checked, as `@adonisjs/core` declares them in `tests/helpers.spec.ts`. Nor is a class in `tests/helpers/`.
 - [ ] **NAM-4** (Guideline) Create a file with its generator (`node ace make:*`), so the name, suffix and folder are the framework's.
