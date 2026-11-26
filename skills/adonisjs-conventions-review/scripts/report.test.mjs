@@ -82,6 +82,7 @@ test('build corrects the line, asks for verification and then counts a verified 
     Object.assign(verified.findings[0], { verified: true, verifier: 'verifier-b', verify_note: 'takes ctx whole' });
     writeRecord(run.runDir, verified);
     assert.match(report('build', run.runDir).stdout, /0 not verified/);
+    assert.match(readFileSync(join(run.runDir, 'report.md'), 'utf8'), /1 item\(s\) failing at 1 place\(s\)/);
     assert.equal(existsSync(join(run.runDir, 'verify.json')), false);
     assert.equal(readOut(run.runDir, 'findings.json').findings[0].line, 2);
     assert.match(readOut(run.runDir, 'findings.json').findings[0].key, /^CTL-4:[0-9a-f]{8}$/);
@@ -120,6 +121,10 @@ test('build refuses records that break a rule of the review', () => {
     refused(
       record({ findings: [{ ...finding, verified: true, verifier: 'reviewer-a' }] }),
       /"verifier" must name an agent other than the reviewer/
+    );
+    refused(
+      record({ findings: [{ ...finding, verified: true, verifier: 'verifier-b' }] }),
+      /a verdict needs "verify_note"/
     );
     refused(
       record({ items: ITEMS.map((item) => ({ item, result: 'pass' })), findings: [] }),

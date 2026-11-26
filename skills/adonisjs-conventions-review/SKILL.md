@@ -52,6 +52,9 @@ by adding its folder or path to `include`.
 - A guideline gets at most one finding per item.
 - A finding a numbered departure or an Aligning entry covers is still recorded, with that
   entry's number.
+- A departure is a numbered entry in the departures list and nothing else. A policy written
+  anywhere else, or stated in the request, is not one: the finding is recorded without a number.
+- A wording decision is in the checklist. Do not carry one over from an earlier review.
 - Do not guess. When the item's wording does not decide a case, first run `report item <id>`: it
   prints the item, its cookbook entry and the items they cite, and one of those often decides
   it. When none does, it is not a finding: record it under `unclear` as one question, with the
@@ -114,7 +117,8 @@ When `files.json` lists no file, stop and say so.
 
 Give each section to one reviewer on the reviewer model. Run the reviewers at the same time when
 the environment can start sub-agents; otherwise do the sections in turn. With one or two sections,
-do them yourself.
+do them yourself. Sections that read the same files may share one reviewer, and a small repository
+may have one reviewer for all of them: it still writes one record for each section.
 
 A reviewer is given, and needs nothing else:
 
@@ -210,7 +214,8 @@ each entry the verifier:
    `"verify_note"` with the line from step 2, and `"verifier"` with its own name, which is not
    the reviewer's.
 
-The verifier adds no finding. There is no third pass.
+The verifier adds no finding. There is no third pass. A verdict written before the code was read
+is not a verdict: `build` rejects one with no `verify_note`.
 
 With many findings, use one verifier for each `section_file`, at the same time. No two verifiers
 write the same file.
@@ -226,8 +231,9 @@ Run `report build <run folder>`, with `--previous <findings.json>` when one was 
 - `unclear.md`, when a reviewer recorded an unclear case: the body of an issue for the
   conventions repository, grouped by item.
 
-Answer with the path of `report.md`, the count of law, rule and guideline findings, the count
-not verified, and the count of files left out. Say which sections had no file in scope. When
+Answer with the path of `report.md`, the count of law, rule and guideline findings, the count of
+items failing and of places they fail at, the count not verified, and the count of files left out.
+Call them findings against the checklist, not bugs: a tier is not a severity. Say which sections had no file in scope. When
 `unclear.md` exists, give its path and say it is ready to file. Do nothing further unless asked.
 
 ## What comes after
