@@ -177,11 +177,16 @@ function readRun(runDir) {
   }
   if (errors.length > 0) fail(errors);
   if (run.sections === 'all') {
-    // A code review has no test file, so the sections about tests have nothing to judge.
+    // A code review has no test file, so the sections about tests have nothing to judge. A test
+    // file is covered by the sections of part 1 and the section about tests, and by nothing else.
     run.sections = parseChecklist()
       .sections.filter((section) => section.kinds.includes(run.kind))
       .map((section) => section.slug)
-      .filter((slug) => run.scope !== 'code' || !/\/tests$/.test(slug));
+      .filter((slug) => run.scope !== 'code' || !/\/tests$/.test(slug))
+      .filter(
+        (slug) =>
+          run.scope !== 'tests' || /^every-change\/|\/tests(?:-and-release)?$/.test(slug)
+      );
   }
   return run;
 }

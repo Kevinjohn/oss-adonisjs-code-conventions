@@ -104,7 +104,8 @@ there is none. With `null`, no finding carries a departure number.
 
 `folder` is the target relative to the root, `.` for the whole root. `diff` is the base, or
 `null`. `sections` is the slugs chosen, in checklist order, or the string `"all"`: every section
-of the kind, without `applications/tests` when the scope is `code`. `report list <kind>` prints
+of the kind, without `applications/tests` when the scope is `code`, and only the sections of part 1
+and the section about tests when the scope is `tests`. `report list <kind>` prints
 the slugs on standard output, one per line with a tab after each.
 
 Run `report prepare <run folder>`. It writes:
