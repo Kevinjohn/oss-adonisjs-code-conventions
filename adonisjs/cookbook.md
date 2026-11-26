@@ -1,6 +1,6 @@
 # AdonisJS cookbook
 
-Draft 8, 2026-11-26. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
+Draft 9, 2026-11-26. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
 and Tuyau 1.
 
 This is the coding guidebook for every AdonisJS repository we own: applications, and the
@@ -106,7 +106,7 @@ and **logout** (the framework's words for starting and ending a session).
   `@unicorn/filename-case`. A name a tool or a platform prescribes (`README.md`, `LICENSE`, a tool's configuration file) keeps its spelling. Documentation and asset files are not covered.
 - **NAM-2 (F)** Classes and types are PascalCase. Interfaces have no `I` prefix. Variables and
   functions are camelCase; constants may be UPPER_CASE. A variable that holds a class is PascalCase: `const { default: User } = await import('#models/user')`.
-- **NAM-3 (F)** A file that holds a class holds one class, and exports it as the generator does: a default export for a controller, model, middleware, exception, event, listener, mail, policy, transformer, provider, seeder and command; a named export for a service (`export class AvatarService`). Validators, factories and config helpers are named exports. In a package, `src/errors.ts` holds every exception class as a named export (PKG-31). The kit's `providers/api_provider.ts` holds a serializer class and exports nothing, and passes.
+- **NAM-3 (F)** A file that holds a class holds one class, and exports it as the generator does: a default export for a controller, model, middleware, exception, event, listener, mail, policy, transformer, provider, seeder and command; a named export for a service (`export class AvatarService`). Validators, factories and config helpers are named exports. In a package, `src/errors.ts` holds every exception class as a named export (PKG-31). The kit's `providers/api_provider.ts` holds a serializer class and exports nothing, and passes. A class declared inside a test or a test group is not checked, as `@adonisjs/core` declares them in `tests/helpers.spec.ts`.
 - **NAM-4 (F)** Create a file with its generator (`node ace make:*`), so the name, suffix and folder
   are the framework's.
 
@@ -126,7 +126,7 @@ and **logout** (the framework's words for starting and ending a session).
 ## Lint, format and TypeScript
 
 - **TOOL-1 (F)** ESLint starts from `@adonisjs/eslint-config`: `configApp()` in an application,
-  `configPkg()` in a package. Add rules; do not remove the preset's.
+  `configPkg()` in a package. Add rules; do not remove the preset's. This item checks the config file. A `// eslint-disable-next-line` comment that names its rule passes, as `@adonisjs/bodyparser` has one in `src/parsers/json.ts`. A directive that covers a whole file, or names no rule, removes the preset's rules and fails, whatever comment explains it.
 - **TOOL-2 (F)** Prettier starts from `@adonisjs/prettier-config`: single quotes, 100 columns, ES5
   trailing commas, `arrowParens: always`, `quoteProps: consistent`, no semicolons.
 - **TOOL-3 (F)** `tsconfig.json` extends `@adonisjs/tsconfig/tsconfig.app.json` in an application
@@ -135,7 +135,7 @@ and **logout** (the framework's words for starting and ending a session).
   the package starter kit declares it. In a workspace the root `package.json` declares it, as the monorepo starter kit does.
 - **TOOL-5 (F)** Script names are the starter kit's: `dev`, `build`, `start`, `test`, `lint`,
   `format`, `typecheck`, plus `codegen` in a monorepo backend and `compile`, `quick:test` and
-  `release` in a package. A script outside this list may be added.
+  `release` in a package. A script outside this list may be added. A package has no `dev` and no `start`, as the package starter kit has none.
 - **TOOL-6 (H)** The repository root has `.editorconfig`, `.gitignore`, `.prettierignore`, `README.md` and `LICENSE.md`. The kits ship the first four.
 - **TOOL-7 (P)** Return early. Check each condition that ends the work at the top of the function;
   do not wrap the main logic in an `if`.
@@ -940,8 +940,6 @@ index.ts           the entry point
 
 - **PKG-1 (F)** The implementation is in `src/`. At the repository root the only source files are `index.ts` and `configure.ts`; everything else there is configuration or one of the framework's folders (`providers/`, `services/`, `commands/`, `stubs/`, `factories/`, `modules/`, `bin/`, `tests/`).
 - **PKG-2 (F)** Create only the folders the package needs. A package with nothing to bind and nothing to register at boot has no `providers/`; one with no container service has no `services/`. A provider that only adds a macro or a boot hook is valid, as the VineJS provider of `@adonisjs/core` is.
-- **PKG-3 (F)** A static import is a relative path that ends in `.ts`; a lazy `import()` ends in
-  `.js` (IMP-5).
 
 ## Name and manifest
 
@@ -977,7 +975,7 @@ README.
 
 - **PKG-10 (F)** Nothing outside the export map is importable. A consumer never imports from
   `build/src/...`.
-- **PKG-11 (F)** Public types live in `src/types.ts`, exported from `./types`; the file may re-export from other type files. Lists the application extends (`LimitersList`) are interfaces there, augmented from the application's config file. Types that need an optional peer dependency are exported from `./types/<name>` instead, as `@adonisjs/auth` exports `./types/session`. A feature subpath may re-export a type; the type is defined once.
+- **PKG-11 (F)** Public types live in `src/types.ts`, exported from `./types`; the file may re-export from other type files. Lists the application extends (`LimitersList`) are interfaces there, augmented from the application's config file. Types that need an optional peer dependency are exported from `./types/<name>` instead, as `@adonisjs/auth` exports `./types/session`. A feature subpath may re-export a type; the type is defined once. A type file holds types only, as the files under `src/types/` of `@adonisjs/http-server` do: a type defined in a file that has runtime code is not re-exported from `src/types.ts`.
 - **PKG-12 (H)** The export map is public API. Removing or renaming a subpath is a breaking change.
 
 Recipe, `index.ts` (`@adonisjs/limiter`, shortened):
@@ -1156,7 +1154,7 @@ export { limiter as default }
   `@adonisjs/core/exceptions` (PKG-21); everything else is a class in `src/errors.ts`.
 - **PKG-33 (F)** An exception whose response needs more than its status, code and message (a header, a redirect, a different body) implements `handle` on itself, so the application's handler needs no special case. Every other exception is left for the framework to render.
 - **PKG-34 (H)** Diagnostics use `debuglog('<scope>:<name>')` from `node:util` in `src/debug.ts`. A package does not write to `console`. It logs through the application's logger only when the application's configuration passes that logger in. Inside a request, `ctx.logger` is the application's logger and may be used.
-- **PKG-35 (H)** State is a class. A function the export map exposes is one of: `defineConfig`; `configure`; a factory that returns an instance or a config provider; a decorator; a mixin; a plugin for Edge, Japa or the assembler; or a pure function, which takes every input as an argument, awaits nothing and reads no module-level variable (a constant is not a variable). A function inside the package that keeps no state is not checked, as `@adonisjs/core` keeps its own in `src/utils.ts`. A generated file, such as the commands index, is not checked.
+- **PKG-35 (H)** State is a class. A function the export map exposes is one of: `defineConfig`; `configure`; a factory that returns an instance or a config provider; a decorator; a mixin; a plugin for Edge, Japa or the assembler; or a pure function, which takes every input as an argument, awaits nothing and reads no module-level variable (a constant is not a variable). A function inside the package that keeps no state is not checked, as `@adonisjs/core` keeps its own in `src/utils.ts`. A generated file, such as the commands index, is not checked. An instance is an instance of a class. A factory that returns one function, as `@adonisjs/shield` exports `csrfFactory` from `./guards`, passes. A function that returns an object of functions passes only when it and each function it returns are pure.
 - **PKG-36 (H)** A middleware the package ships is a class with `handle(ctx, next, options?)`, exported from its own subpath. The configure hook registers it, unless the middleware reads `ctx.auth`: the README then tells the application where to mount it.
 - **PKG-37 (F)** A command the package ships is a file in `commands/`. The build writes
   `build/commands/main.js` with `adonis-kit index build/commands`, exported as `./commands` and
@@ -1249,7 +1247,7 @@ it.
 
 ## Tests and release
 
-- **PKG-39 (F)** Tests run on Japa through `bin/test.ts`, in `tests/**/*.spec.ts`. Shared test code is in `tests/helpers.ts`, or in files under `tests/helpers/`. Shared means used by more than one spec file. Tests of repository tooling that is not shipped are not covered.
+- **PKG-39 (F)** Tests run on Japa through `bin/test.ts`, in `tests/**/*.spec.ts`. Shared test code is in `tests/helpers.ts`, or in files under `tests/helpers/`. Shared means used by more than one spec file. Tests of repository tooling that is not shipped are not covered. A type assertion is a test: it is inside a `test()` in a spec file, with `@japa/expect-type`, as `@adonisjs/core` has them in `tests/hash.spec.ts`.
 - **PKG-40 (F)** The configure hook has a test (`tests/configure.spec.ts`) that runs it against a
   scratch application with `@japa/file-system` and asserts the files it wrote.
 - **PKG-41 (F)** The provider has a test that boots an application with it and resolves the

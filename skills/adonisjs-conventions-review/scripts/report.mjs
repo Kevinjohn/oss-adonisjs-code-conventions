@@ -387,6 +387,9 @@ function build(runDir, previousPath) {
       if (judged && (!squash(finding.verifier) || finding.verifier === record.reviewer)) {
         say(`${where}: "verifier" must name an agent other than the reviewer`);
       }
+      if (judged && !squash(finding.verify_note)) {
+        say(`${where}: a verdict needs "verify_note", the line that says what the code does`);
+      }
       const digest = createHash('sha256')
         .update(squash(finding.code) || squash(finding.observed))
         .digest('hex');
@@ -498,6 +501,8 @@ function build(runDir, previousPath) {
     laws: count('law'),
     rules: count('rule'),
     guidelines: count('guideline'),
+    items_failed: new Set(open.map((entry) => entry.item)).size,
+    places: new Set(open.map((entry) => `${entry.path}:${entry.line ?? ''}`)).size,
     covered_by_departure: findings.length - open.length,
     rejected: rejected.length,
     not_verified: toVerify.length,
@@ -554,6 +559,9 @@ function renderReport({ checklist, run, summary, findings, resolved, coverage })
     `- Findings: ${summary.laws} law, ${summary.rules} rule, ${summary.guidelines} guideline; ` +
       `${summary.covered_by_departure} covered by a departure; ${summary.rejected} rejected in ` +
       `the second pass; ${summary.not_verified} not verified`,
+    `- These are ${summary.items_failed} item(s) failing at ${summary.places} place(s). A place two ` +
+      `items cover is one finding for each`,
+    '- A tier says what a failed item does to a merge. It is not the severity of a defect',
     '',
   ];
   const open = findings.filter((entry) => entry.departure === null);
