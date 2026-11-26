@@ -1,6 +1,6 @@
 # AdonisJS cookbook
 
-Draft 14, 2026-11-26. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
+Draft 15, 2026-11-26. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
 and Tuyau 1.
 
 This is the coding guidebook for every AdonisJS repository we own: applications, and the
@@ -103,7 +103,7 @@ and **logout** (the framework's words for starting and ending a session).
 ## Names
 
 - **NAM-1 (F)** Files and folders are `snake_case`. The official ESLint preset enforces it with
-  `@unicorn/filename-case`. A name a tool or a platform prescribes (`README.md`, `LICENSE`, a tool's configuration file) keeps its spelling. Documentation and asset files are not covered.
+  `@unicorn/filename-case`. A name a tool or a platform prescribes (`README.md`, `LICENSE.md`, a tool's configuration file) keeps its spelling. Documentation and asset files are not covered.
 - **NAM-2 (F)** Classes and types are PascalCase. Interfaces have no `I` prefix. Variables and
   functions are camelCase; constants may be UPPER_CASE. A variable that holds a class is PascalCase: `const { default: User } = await import('#models/user')`. A React component, and a variable that holds one, is PascalCase, as the React starter kit exports `Login` from `inertia/pages/auth/login.tsx`. A parameter is not checked.
 - **NAM-3 (F)** A file that holds a class holds one class, and exports it as the generator does: a default export for a controller, model, middleware, exception, event, listener, mail, policy, transformer, provider, seeder and command; a named export for a service (`export class AvatarService`). Validators, factories and config helpers are named exports. In a package, `src/errors.ts` holds every exception class as a named export (PKG-31). The kit's `providers/api_provider.ts` holds a serializer class and exports nothing, and passes. A class declared inside a test or a test group is not checked, as `@adonisjs/core` declares them in `tests/helpers.spec.ts`. Nor is a class in `tests/helpers/`.
