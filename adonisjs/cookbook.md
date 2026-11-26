@@ -1,6 +1,6 @@
 # AdonisJS cookbook
 
-Draft 9, 2026-11-26. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
+Draft 10, 2026-11-26. Written against AdonisJS 7 (`@adonisjs/core` 7.x), Lucid 22, VineJS 4, Japa
 and Tuyau 1.
 
 This is the coding guidebook for every AdonisJS repository we own: applications, and the
@@ -116,7 +116,7 @@ and **logout** (the framework's words for starting and ending a session).
 - **IMP-2 (F)** Import a type with `import type`, or the inline form `import { type X }`.
 - **IMP-3 (F)** Use the `node:` prefix for Node built-ins.
 - **IMP-4 (F)** In an application, import across folders through the `#` subpath aliases declared
-  under `imports` in `package.json`. Do not write relative imports.
+  under `imports` in `package.json`. Do not write relative imports. Frontend code a bundler builds is not checked: the React starter kit imports relatively and through a `~/` alias under `inertia/`.
 - **IMP-5 (F)** In a package, a static import is a relative path that ends in `.ts`; a lazy
   `import()` of a built module ends in `.js`. Packages declare no `#` aliases, as the official
   packages do not. A re-export (`export … from`) is a static import.
@@ -126,11 +126,11 @@ and **logout** (the framework's words for starting and ending a session).
 ## Lint, format and TypeScript
 
 - **TOOL-1 (F)** ESLint starts from `@adonisjs/eslint-config`: `configApp()` in an application,
-  `configPkg()` in a package. Add rules; do not remove the preset's. This item checks the config file. A `// eslint-disable-next-line` comment that names its rule passes, as `@adonisjs/bodyparser` has one in `src/parsers/json.ts`. A directive that covers a whole file, or names no rule, removes the preset's rules and fails, whatever comment explains it.
+  `configPkg()` in a package. Add rules; do not remove the preset's. This item checks the config file. A `// eslint-disable-next-line` comment that names its rule passes, as `@adonisjs/bodyparser` has one in `src/parsers/json.ts`. A directive that covers a whole file, or names no rule, removes the preset's rules and fails, whatever comment explains it. Frontend code inside the application is linted by the same config with the preset's framework rules, as the React starter kit has `configApp(...react)`. A separate frontend package in a monorepo chooses its own ESLint config, as the monorepo starter kit leaves `apps/frontend` empty.
 - **TOOL-2 (F)** Prettier starts from `@adonisjs/prettier-config`: single quotes, 100 columns, ES5
-  trailing commas, `arrowParens: always`, `quoteProps: consistent`, no semicolons.
+  trailing commas, `arrowParens: always`, `quoteProps: consistent`, no semicolons. In a monorepo the root `package.json` declares it for every package, the frontend included, as the monorepo starter kit does.
 - **TOOL-3 (F)** `tsconfig.json` extends `@adonisjs/tsconfig/tsconfig.app.json` in an application
-  and `@adonisjs/tsconfig/tsconfig.package.json` in a package.
+  and `@adonisjs/tsconfig/tsconfig.package.json` in a package. Frontend code inside the application extends `@adonisjs/tsconfig/tsconfig.client.json`, as the React starter kit does in `inertia/tsconfig.json`. A separate frontend package in a monorepo chooses its own.
 - **TOOL-4 (H)** Node is version 24 or later, declared under `engines`. The framework requires it;
   the package starter kit declares it. In a workspace the root `package.json` declares it, as the monorepo starter kit does.
 - **TOOL-5 (F)** Script names are the starter kit's: `dev`, `build`, `start`, `test`, `lint`,
