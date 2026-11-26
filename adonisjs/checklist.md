@@ -1,6 +1,6 @@
 # AdonisJS pre-PR checklist
 
-Draft 9, 2026-11-26. The working half of the [AdonisJS cookbook](./cookbook.md): every
+Draft 10, 2026-11-26. The working half of the [AdonisJS cookbook](./cookbook.md): every
 rule in it, as a check. The cookbook holds the reasons, the origin of each rule, the vocabulary
 table and the recipes. The rule id is the same in both; the tier and the wording that is checked
 are here.
@@ -64,7 +64,7 @@ Items:
 - [ ] **IMP-1** (Law) ES modules only: `"type": "module"`, `import`, top-level `await`.
 - [ ] **IMP-2** (Law) Import a type with `import type`, or the inline form `import { type X }`.
 - [ ] **IMP-3** (Law) Use the `node:` prefix for Node built-ins.
-- [ ] **IMP-4** (Law) In an application, import across folders through the `#` subpath aliases declared under `imports` in `package.json`. Do not write relative imports.
+- [ ] **IMP-4** (Law) In an application, import across folders through the `#` subpath aliases declared under `imports` in `package.json`. Do not write relative imports. Frontend code a bundler builds is not checked: the React starter kit imports relatively and through a `~/` alias under `inertia/`.
 - [ ] **IMP-5** (Law) In a package, a static import is a relative path that ends in `.ts`; a lazy `import()` of a built module ends in `.js`. Packages declare no `#` aliases, as the official packages do not. A re-export (`export … from`) is a static import.
 - [ ] **IMP-6** (Rule) Import a container service from its `services` path. Do not construct what a package already provides.
 
@@ -78,9 +78,9 @@ Mechanical checks:
 
 Items:
 
-- [ ] **TOOL-1** (Law) ESLint starts from `@adonisjs/eslint-config`: `configApp()` in an application, `configPkg()` in a package. Add rules; do not remove the preset's. This item checks the config file. A `// eslint-disable-next-line` comment that names its rule passes, as `@adonisjs/bodyparser` has one in `src/parsers/json.ts`. A directive that covers a whole file, or names no rule, removes the preset's rules and fails, whatever comment explains it.
-- [ ] **TOOL-2** (Rule) Prettier starts from `@adonisjs/prettier-config`: single quotes, 100 columns, ES5 trailing commas, `arrowParens: always`, `quoteProps: consistent`, no semicolons.
-- [ ] **TOOL-3** (Law) `tsconfig.json` extends `@adonisjs/tsconfig/tsconfig.app.json` in an application and `@adonisjs/tsconfig/tsconfig.package.json` in a package.
+- [ ] **TOOL-1** (Law) ESLint starts from `@adonisjs/eslint-config`: `configApp()` in an application, `configPkg()` in a package. Add rules; do not remove the preset's. This item checks the config file. A `// eslint-disable-next-line` comment that names its rule passes, as `@adonisjs/bodyparser` has one in `src/parsers/json.ts`. A directive that covers a whole file, or names no rule, removes the preset's rules and fails, whatever comment explains it. Frontend code inside the application is linted by the same config with the preset's framework rules, as the React starter kit has `configApp(...react)`. A separate frontend package in a monorepo chooses its own ESLint config, as the monorepo starter kit leaves `apps/frontend` empty.
+- [ ] **TOOL-2** (Rule) Prettier starts from `@adonisjs/prettier-config`: single quotes, 100 columns, ES5 trailing commas, `arrowParens: always`, `quoteProps: consistent`, no semicolons. In a monorepo the root `package.json` declares it for every package, the frontend included, as the monorepo starter kit does.
+- [ ] **TOOL-3** (Law) `tsconfig.json` extends `@adonisjs/tsconfig/tsconfig.app.json` in an application and `@adonisjs/tsconfig/tsconfig.package.json` in a package. Frontend code inside the application extends `@adonisjs/tsconfig/tsconfig.client.json`, as the React starter kit does in `inertia/tsconfig.json`. A separate frontend package in a monorepo chooses its own.
 - [ ] **TOOL-4** (Law) Node is version 24 or later, declared under `engines`. The framework requires it; the package starter kit declares it. In a workspace the root `package.json` declares it, as the monorepo starter kit does.
 - [ ] **TOOL-5** (Rule) Script names are the starter kit's: `dev`, `build`, `start`, `test`, `lint`, `format`, `typecheck`, plus `codegen` in a monorepo backend and `compile`, `quick:test` and `release` in a package. A script outside this list may be added. A package has no `dev` and no `start`, as the package starter kit has none.
 - [ ] **TOOL-6** (Law) The repository root has `.editorconfig`, `.gitignore`, `.prettierignore`, `README.md` and `LICENSE.md`. The kits ship the first four.
