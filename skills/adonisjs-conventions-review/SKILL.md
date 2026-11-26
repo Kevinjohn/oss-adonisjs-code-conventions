@@ -70,7 +70,8 @@ by adding its folder or path to `include`.
   folder with `package.json`, no `adonisrc.ts` and no `@adonisjs/core` in any dependency list:
   it is not server code, and only three sections cover it. A workspace root is such a folder
   inside a monorepo that is not the frontend (a shared domain package, repository tooling): only
-  "Vocabulary" covers it, and TOOL-2 is checked in the run of the monorepo root.
+  "Vocabulary" covers it, and TOOL-2 is checked in the run of the monorepo root. The monorepo
+  root itself is kind `frontend`, never `workspace`, so its run checks TOOL-2.
 - The root is the target, or the nearest folder above it that is one of these. When the target
   holds several roots, do one complete run for each.
 - The kind is `application`, `package`, `frontend` or `workspace`. `report list <kind>` prints the sections that apply.
