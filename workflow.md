@@ -67,6 +67,8 @@ A question a review recorded is settled between reviews, by one of three answers
 ## How to review with it
 
 1. State the scope first: the lines a pull request changes, or the folders of a repository review.
+   Run the `lint` script and `check-conventions` before it. They decide the items marked `lint`
+   and `script` in `adonisjs/checks.json`, and a reviewer does not review those items.
 2. Give every item in the sections that apply one result: pass, n/a, departure or fail. Check
    each n/a against the n/a rule above, and each departure against the numbered entry it cites;
    one that does not hold is a fail.
