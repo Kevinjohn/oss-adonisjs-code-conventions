@@ -24,6 +24,12 @@ const CHECKLIST_PATH = join(REPOSITORY, 'adonisjs/checklist.md');
 const COOKBOOK_PATH = join(REPOSITORY, 'adonisjs/cookbook.md');
 const TERMINOLOGY_CHECK = join(REPOSITORY, 'scripts/check-terminology.mjs');
 const PART_KINDS = { 1: ['application', 'package'], 2: ['application'], 3: ['package'] };
+// A separate frontend package is not server code: the checklist covers it in these sections only.
+const FRONTEND_SECTIONS = new Set([
+  'every-change/vocabulary',
+  'every-change/lint-format-and-typescript',
+  'applications/the-frontend-api-client',
+]);
 const RESULTS = ['pass', 'fail', 'n/a', 'departure', 'unclear'];
 const TIERS = ['Law', 'Rule', 'Guideline'];
 // Example code and build or tool output are not reviewed unless the run includes them by path.
@@ -84,12 +90,15 @@ function parseChecklist() {
       section = {
         slug: `${part.slug}/${slugOf(heading[1])}`,
         name: heading[1],
-        kinds: PART_KINDS[part.number],
+        kinds: [],
         when: '',
         items: [],
         checks: [],
         text: [],
       };
+      section.kinds = FRONTEND_SECTIONS.has(section.slug)
+        ? [...PART_KINDS[part.number], 'frontend']
+        : PART_KINDS[part.number];
       sections.push(section);
     }
     if (!section) continue;
@@ -649,6 +658,6 @@ if (command === 'list') {
   build(resolve(args[0]), flag === -1 ? null : args[flag + 1]);
 } else {
   fail([
-    'Usage: report.mjs list [application|package] | section <slug> | item <id> | prepare <run-dir> | build <run-dir> [--previous <findings.json>]',
+    'Usage: report.mjs list [application|package|frontend] | section <slug> | item <id> | prepare <run-dir> | build <run-dir> [--previous <findings.json>]',
   ]);
 }

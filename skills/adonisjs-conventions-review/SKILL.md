@@ -1,6 +1,6 @@
 ---
 name: adonisjs-conventions-review
-description: Review an AdonisJS application or package against the AdonisJS conventions checklist and write a structured list of findings (findings.json and report.md). Takes a repository or a folder, or the lines a branch changed; a scope (code, tests or both); the checklist sections to run (or all); and an optional reviewer model. Example code, build output, Markdown and HTML are left out unless asked for. Read-only, it reports and never fixes. Use when asked to check, audit or review code or a diff against the AdonisJS conventions or the checklist.
+description: Review an AdonisJS application or package, or the frontend beside one, against the AdonisJS conventions checklist and write a structured list of findings (findings.json and report.md). Takes a repository or a folder, or the lines a branch changed; a scope (code, tests or both); the checklist sections to run (or all); and an optional reviewer model. Example code, build output, Markdown and HTML are left out unless asked for. Read-only, it reports and never fixes. Use when asked to check, audit or review code or a diff against the AdonisJS conventions or the checklist.
 ---
 
 # AdonisJS conventions review
@@ -66,10 +66,12 @@ by adding its folder or path to `include`.
 ### 1. Fix the root and the kind
 
 - An application root is a folder with `adonisrc.ts`. A package root is a folder with
-  `package.json` and no `adonisrc.ts`; it need not have a `configure.ts`.
+  `package.json` and no `adonisrc.ts`; it need not have a `configure.ts`. A frontend root is a
+  folder with `package.json`, no `adonisrc.ts` and no `@adonisjs/core` in any dependency list:
+  it is not server code, and only three sections cover it.
 - The root is the target, or the nearest folder above it that is one of these. When the target
   holds several roots, do one complete run for each.
-- The kind is `application` or `package`. `report list <kind>` prints the sections that apply.
+- The kind is `application`, `package` or `frontend`. `report list <kind>` prints the sections that apply.
 - Paths in every record are relative to the root.
 
 ### 2. Find the departures list
