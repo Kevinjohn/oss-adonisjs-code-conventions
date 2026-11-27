@@ -283,6 +283,24 @@ const SHAPES = [
   ['IMP-5', 'package', true, { 'src/a.ts': "import './b.js'\n" }],
   ['IMP-5', 'package', true, { 'package.json': packageJson(PACKAGE, { imports: { '#src/*': './src/*.js' } }) }],
   ['IMP-1', 'package', false, { 'tests/fixtures/app/adonisrc.ts': '', 'tests/fixtures/app/package.json': json({ type: 'commonjs' }) }],
+  // Application source a package holds as text is not the package's code.
+  ['IMP-5', 'package', false, { 'configure.ts': "const steps = `import access from '#config/access'\nawait import('#models/user')\n`\n" }],
+  ['IMP-5', 'package', false, { 'tests/a.spec.ts': "assert.equal(file, \"import auth from '#middleware/auth_middleware'\")\n" }],
+  ['IMP-5', 'package', false, { 'src/a.ts': "const text = `a ${kind ? `x` : ''} import z from '#q'`\n" }],
+  ['IMP-5', 'package', true, { 'src/a.ts': "const text = `import x from '#a'`\nimport b from '#c'\n" }],
+  ['IMP-5', 'package', true, { 'src/a.ts': "const quotes = /['\"`]/\nconst load = () => import('#models/user')\n" }],
+  ['IMP-5', 'package', true, { 'src/a.ts': "const text = `${await import('#models/user')}`\n" }],
+  ['IMP-4', 'application', false, { 'app/services/a_service.ts': "export const stub = \"import { b } from './b_service.js'\"\n" }],
+  ['NAM-3', 'package', false, { 'src/render.ts': 'export const files = `\nexport default class User {}\n` + `\nexport default class Post {}\n`\n' }],
+  ['PKG-6', 'package', false, { 'src/render.ts': "export const config = `import { defineConfig } from '@adonisjs/ally'\n`\n" }],
+  ['PKG-6', 'package', true, { 'src/a.ts': "import { defineConfig } from '@adonisjs/ally'\n" }],
+  ['PKG-23', 'package', false, { 'src/render.ts': "export const config = `import env from '#start/env'\nconst key = process.env.APP_KEY\n`\n" }],
+  ['PKG-23', 'package', true, { 'src/a.ts': "import env from '@adonisjs/core/services/env'\n" }],
+  ['PKG-47', 'package', false, { 'src/render.ts': "export const body = \"throw new Error('no')\"\n" }],
+  // Documentation tooling and example code are not the package.
+  ['PKG-1', 'package', false, { 'docs/.vitepress/config.ts': 'export default {}\n', 'examples/overlay/app/a.ts': 'export const a = 1\n' }],
+  ['IMP-5', 'package', false, { 'docs/.vitepress/theme/index.ts': "import Recording from './recording.vue'\n", 'examples/overlay/start/routes.ts': "import router from '#start/kernel'\n" }],
+  ['IMP-4', 'application', true, { 'examples/app/package.json': APPLICATION['package.json'], 'examples/app/adonisrc.ts': '', 'examples/app/app/services/a_service.ts': "import { b } from './b_service.js'\n" }],
 ];
 SHAPES.forEach(([id, kind, fails, files], index) => {
   test(`${id} ${fails ? 'fails' : 'passes'} on shape ${index + 1}`, (t) => {
