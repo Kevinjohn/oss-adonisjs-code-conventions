@@ -668,7 +668,9 @@ if (command === 'list') {
 } else if (command === 'section' && args[0]) {
   const section = parseChecklist().sections.find((candidate) => candidate.slug === args[0]);
   if (!section) fail([`No section "${args[0]}". Run "list" for the slugs.`]);
-  console.log(section.text.join('\n').trim());
+  // The checks were run by `prepare`: a reviewer who reruns one does it from the wrong folder.
+  const text = section.text.join('\n').trim();
+  console.log(text.replace(/^Mechanical checks:$/m, 'Mechanical checks, already run (their output is in the checks file; run none):'));
   if (section.partly.length > 0) {
     console.log(
       `\nChecked in part by \`check-conventions\`: ${section.partly.join(', ')}. Report only what a script cannot see in the files.`
