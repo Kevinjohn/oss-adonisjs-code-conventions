@@ -46,6 +46,10 @@ node /path/to/this/repository/scripts/check-conventions.mjs
 ```
 
 Run it from the root of the repository to check. It finds each application and package in it.
+It reads the statements of a file: source that a package holds as text, in a string or a
+template, is not checked. A package's `docs/` and `examples/` folders are not checked as the
+package; an application under `examples/` with its own `package.json` is checked as an
+application.
 
 [adonisjs/checks.json](./adonisjs/checks.json) says how every item is checked:
 
