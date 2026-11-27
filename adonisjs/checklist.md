@@ -45,7 +45,7 @@ review runs are in [How to use these conventions](../workflow.md).
 
 Mechanical checks:
 
-- [ ] `check-terminology` (`scripts/check-terminology.mjs` in the conventions repository, run from the repository root) prints no rejected synonym
+- [ ] `check-terminology` (`scripts/check-terminology.mjs` in the conventions repository, run from the repository root) prints no rejected synonym (VOC-2)
 
 Items:
 
@@ -265,9 +265,9 @@ Items:
 
 Mechanical checks:
 
-- [ ] `grep -rL "async down" database/migrations` prints nothing
+- [ ] `grep -rL "async down" database/migrations` prints nothing (DB-6)
 - [ ] every `@column` in `app/models` refines one column (MOD-2)
-- [ ] `git diff --name-status origin/main -- database/migrations` shows only `A` lines
+- [ ] `git diff --name-status origin/main -- database/migrations` shows only `A` lines (DB-7)
 
 Items:
 
