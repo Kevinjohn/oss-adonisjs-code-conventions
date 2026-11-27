@@ -8,7 +8,12 @@
 //
 // The repository is read from its root. Every folder with `adonisrc.ts` is an application, and
 // every folder with a `package.json` that lists `@adonisjs/core` and has no `adonisrc.ts` is a
-// package. Frontend code is not checked here.
+// package. Frontend code is not checked here. Nor are a package's `docs/` and `examples/` folders:
+// they hold documentation tooling and example code, not the package. An application under
+// `examples/` with its own `package.json` is still checked as an application.
+//
+// Code inside a string or a template is not code of the file. A generator that holds application
+// source as text is checked as the package it is; the text is not.
 //
 // A finding stays open until the code changes or the repository's departures list covers it.
 // `conventions.config.json` at the root links a finding to a numbered entry of that list:
@@ -43,6 +48,8 @@ const TOOL_NAMES = new Set(['vite-env.d.ts']);
 const NOT_PEERS = new Set(['@adonisjs/presets']);
 // The framework writes these (LAY-4); no item covers a generated file.
 const GENERATED = ['.adonisjs/', 'database/schema.ts'];
+// Folders of a package that hold no package code.
+const NOT_PACKAGE_CODE = ['docs/', 'examples/', 'example/'];
 const DEPENDENCY_LISTS = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
 
 /** The id, tier and text of every item in the checklist. */
@@ -96,6 +103,9 @@ function withoutComments(text) {
     } else if (char === "'" || char === '"' || char === '`') {
       quote = char;
       out += char;
+    } else if (char === '\\') {
+      // An escape in a regular expression: `\/*` opens no comment.
+      out += char + (text[++index] ?? '');
     } else if (char === '/' && text[index + 1] === '*') {
       const end = text.indexOf('*/', index + 2);
       const stop = end === -1 ? text.length : end + 2;
@@ -105,6 +115,68 @@ function withoutComments(text) {
       const end = text.indexOf('\n', index);
       index = (end === -1 ? text.length : end) - 1;
     } else out += char;
+  }
+  return out;
+}
+
+/**
+ * Blanks what is inside every string, template and regular expression, and keeps the quotes and
+ * every position. Code in a template's `${}` stays.
+ */
+function withoutStrings(code) {
+  let out = '';
+  let quote = null;
+  let depth = 0;
+  const templates = [];
+  // The last character of code before this one, spaces apart: it says whether a `/` divides.
+  let last = '';
+  const blank = (char) => (char === '\n' ? '\n' : ' ');
+  for (let index = 0; index < code.length; index++) {
+    const char = code[index];
+    if (quote) {
+      if (char === '\\') out += ' ' + blank(code[++index] ?? '');
+      else if (char === quote || (char === '\n' && quote !== '`')) {
+        quote = null;
+        out += char;
+        last = char;
+      } else if (quote === '`' && char === '$' && code[index + 1] === '{') {
+        templates.push(depth);
+        quote = null;
+        out += '${';
+        last = '{';
+        index++;
+      } else out += blank(char);
+    } else if (char === "'" || char === '"' || char === '`') {
+      quote = char;
+      out += char;
+    } else if (
+      char === '/' &&
+      (last === '' ||
+        '(,=:[!&|?{};+-*%<>~^'.includes(last) ||
+        /\b(?:return|typeof|case|await|yield|throw|else|in|of|void|delete|do)\s*$/.test(out.slice(-12)))
+    ) {
+      // A regular expression: a quote inside it opens no string.
+      let end = index + 1;
+      for (let inClass = false; end < code.length && code[end] !== '\n'; end++) {
+        if (code[end] === '\\' && code[end + 1] !== '\n') end++;
+        else if (code[end] === '[') inClass = true;
+        else if (code[end] === ']') inClass = false;
+        else if (code[end] === '/' && !inClass) break;
+      }
+      out += '/' + code.slice(index + 1, end).replace(/[^\n]/g, ' ');
+      index = end - 1;
+      // What follows the closing `/` divides.
+      last = ')';
+    } else if (char === '}' && templates.length > 0 && templates.at(-1) === depth) {
+      templates.pop();
+      quote = '`';
+      out += char;
+    } else {
+      if (char === '{') depth++;
+      else if (char === '}') depth--;
+      out += char;
+      if (/\S/.test(char)) last = char;
+    }
   }
   return out;
 }
@@ -143,6 +215,7 @@ function createRoot(repository, folder, kind, files) {
     .map((path) => path.slice(prefix.length))
     .filter((path) => !GENERATED.some((generated) => path === generated || path.startsWith(generated)));
   const cache = new Map();
+  const bare = new Map();
   const read = (path) => {
     if (!cache.has(path)) cache.set(path, readFileSync(join(repository, prefix + path), 'utf8'));
     return cache.get(path);
@@ -154,6 +227,10 @@ function createRoot(repository, folder, kind, files) {
     has: (path) => own.includes(path),
     read,
     code: (path) => withoutComments(read(path)),
+    bare: (path) => {
+      if (!bare.has(path)) bare.set(path, withoutStrings(withoutComments(read(path))));
+      return bare.get(path);
+    },
     json: (path) => JSON.parse(read(path)),
     source: (...folders) =>
       own.filter(
@@ -166,11 +243,35 @@ function createRoot(repository, folder, kind, files) {
   };
 }
 
-/** Every match of a pattern in the given files, as findings. */
-function matches(root, paths, pattern, message) {
+/**
+ * The modules a file imports: `import`, `export … from` and `import()` statements of the file
+ * itself, never one written inside a string.
+ */
+function imports(root, path) {
+  const code = root.code(path);
+  const bare = root.bare(path);
+  return [...bare.matchAll(/(?:\bfrom\s+|\bimport\s+|\bimport\s*(\()\s*)(['"])/g)].map((match) => {
+    const open = match.index + match[0].length;
+    return { specifier: code.slice(open, bare.indexOf(match[2], open)), lazy: Boolean(match[1]), line: lineOf(code, match.index) };
+  });
+}
+
+/** Every import of the given files that the test picks, as findings. */
+const importFindings = (root, paths, test, message) =>
+  paths.flatMap((path) =>
+    imports(root, path)
+      .filter(test)
+      .map(({ line }) => ({ path, line, message }))
+  );
+
+/**
+ * Every match of a pattern in the given files, as findings. The pattern reads the code with its
+ * strings blanked, unless `view` is `code`, for a pattern that reads what a string holds.
+ */
+function matches(root, paths, pattern, message, view = 'bare') {
   const found = [];
   for (const path of paths) {
-    const code = root.code(path);
+    const code = root[view](path);
     for (const match of code.matchAll(pattern)) {
       found.push({ path, line: lineOf(code, match.index + match[0].search(/\S/)), message });
     }
@@ -241,7 +342,7 @@ export const CHECKS = {
       const found = [];
       const paths = root.files.filter((path) => SOURCE.test(path) && !path.endsWith('.d.ts') && !path.startsWith('tests/'));
       for (const path of paths) {
-        const code = root.code(path);
+        const code = root.bare(path);
         const classes = [...code.matchAll(CLASS)];
         if (root.kind === 'package' && path === 'src/errors.ts') {
           for (const match of classes.filter(([, , isDefault]) => isDefault)) {
@@ -277,17 +378,17 @@ export const CHECKS = {
   'IMP-4': {
     kinds: ['application'],
     run: (root) => [
-      ...matches(
+      ...importFindings(
         root,
         root.source('app/', 'start/', 'config/', 'providers/'),
-        /(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+)['"]\.\.?\//g,
+        ({ specifier }) => /^\.\.?\//.test(specifier),
         'A relative import; an application imports through a `#` alias.'
       ),
       // The kit declares no alias for `commands/`, so a file there imports its neighbour by path.
-      ...matches(
+      ...importFindings(
         root,
         root.source('commands/', 'database/'),
-        /(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+)['"]\.\.\//g,
+        ({ specifier }) => specifier.startsWith('../'),
         'A relative import of another folder; an application imports through a `#` alias.'
       ),
     ],
@@ -300,18 +401,12 @@ export const CHECKS = {
         found.push({ path: 'package.json', line: null, message: 'It declares a `#` alias under `imports`.' });
       }
       for (const path of root.files.filter((file) => SOURCE.test(file) && !file.endsWith('.d.ts'))) {
-        const code = root.code(path);
-        for (const match of code.matchAll(/(?:\bfrom\s+|\bimport\s+)['"]([^'"]+)['"]/g)) {
-          const line = lineOf(code, match.index);
-          if (match[1].startsWith('#')) found.push({ path, line, message: 'A `#` alias; a package imports by relative path.' });
-          else if (match[1].startsWith('.') && !match[1].endsWith('.ts')) {
+        for (const { specifier, lazy, line } of imports(root, path)) {
+          if (specifier.startsWith('#')) found.push({ path, line, message: 'A `#` alias; a package imports by relative path.' });
+          else if (!specifier.startsWith('.')) continue;
+          else if (!lazy && !specifier.endsWith('.ts')) {
             found.push({ path, line, message: 'A static relative import that does not end in `.ts`.' });
-          }
-        }
-        for (const match of code.matchAll(/\bimport\s*\(\s*['"]([.#][^'"]*)['"]/g)) {
-          const line = lineOf(code, match.index);
-          if (match[1].startsWith('#')) found.push({ path, line, message: 'A `#` alias; a package imports by relative path.' });
-          else if (!path.startsWith('tests/') && !match[1].endsWith('.js')) {
+          } else if (lazy && !path.startsWith('tests/') && !specifier.endsWith('.js')) {
             found.push({ path, line, message: 'A lazy relative `import()` that does not end in `.js`.' });
           }
         }
@@ -391,7 +486,13 @@ export const CHECKS = {
       ...matches(
         root,
         root.source(...APP_CODE).filter((path) => path !== 'start/env.ts'),
-        /process\.env\b|#start\/env\b/g,
+        /process\.env\b/g,
+        'Reads `env` or `process.env` outside `config/`.'
+      ),
+      ...importFindings(
+        root,
+        root.source(...APP_CODE).filter((path) => path !== 'start/env.ts'),
+        ({ specifier }) => /^#start\/env\b/.test(specifier),
         'Reads `env` or `process.env` outside `config/`.'
       ),
       ...root.source('bin/').flatMap((path) => {
@@ -415,7 +516,8 @@ export const CHECKS = {
         root,
         root.source(...APP_CODE, 'config/').filter((path) => path !== 'start/env.ts'),
         /NODE_ENV['"\])]*\s*[!=]==?|[!=]==?\s*(?:process\.env\.NODE_ENV\b|env\.get\(\s*['"]NODE_ENV)/g,
-        'Compares `NODE_ENV`; ask `app.inProduction`, `app.inDev` or `app.inTest`.'
+        'Compares `NODE_ENV`; ask `app.inProduction`, `app.inDev` or `app.inTest`.',
+        'code'
       ),
   },
   'CTL-4': {
@@ -747,8 +849,9 @@ export const CHECKS = {
         .map((name) => ({ path: 'package.json', line: null, message: `\`${name}\` is under \`dependencies\`.` }));
       const imported = new Set();
       for (const path of root.source(...SHIPPED)) {
-        for (const match of root.code(path).matchAll(/(?:\bfrom\s+|\bimport\s*\(\s*|\bimport\s+)['"](@adonisjs\/[^/'"]+)/g)) {
-          imported.add(match[1]);
+        for (const { specifier } of imports(root, path)) {
+          const name = specifier.match(/^@adonisjs\/[^/]+/);
+          if (name) imported.add(name[0]);
         }
       }
       imported.delete(pkg.name);
@@ -779,13 +882,14 @@ export const CHECKS = {
   },
   'PKG-23': {
     kinds: ['package'],
-    run: (root) =>
-      matches(
-        root,
-        root.source('src/', 'providers/', 'services/', 'commands/'),
-        /process\.env\b|services\/env\b/g,
-        'Shipped code reads `process.env` or the `env` service.'
-      ),
+    run(root) {
+      const paths = root.source('src/', 'providers/', 'services/', 'commands/');
+      const message = 'Shipped code reads `process.env` or the `env` service.';
+      return [
+        ...matches(root, paths, /process\.env\b/g, message),
+        ...importFindings(root, paths, ({ specifier }) => /services\/env\b/.test(specifier), message),
+      ];
+    },
   },
   'PKG-25': {
     kinds: ['package'],
@@ -906,7 +1010,13 @@ export function checkRepository(repository) {
     }
     for (const { folder, kind } of roots) {
       if (!check.kinds.includes(kind)) continue;
-      const root = createRoot(repository, folder, kind, files.filter((path) => ownerOf(path) === folder));
+      const prefix = folder === '.' ? '' : `${folder}/`;
+      const own = files.filter(
+        (path) =>
+          ownerOf(path) === folder &&
+          !(kind === 'package' && NOT_PACKAGE_CODE.some((left) => path.startsWith(prefix + left)))
+      );
+      const root = createRoot(repository, folder, kind, own);
       add(id, root, check.run(root));
     }
   }
