@@ -103,6 +103,9 @@ function withoutComments(text) {
     } else if (char === "'" || char === '"' || char === '`') {
       quote = char;
       out += char;
+    } else if (char === '\\') {
+      // An escape in a regular expression: `\/*` opens no comment.
+      out += char + (text[++index] ?? '');
     } else if (char === '/' && text[index + 1] === '*') {
       const end = text.indexOf('*/', index + 2);
       const stop = end === -1 ? text.length : end + 2;
@@ -125,6 +128,8 @@ function withoutStrings(code) {
   let quote = null;
   let depth = 0;
   const templates = [];
+  // The last character of code before this one, spaces apart: it says whether a `/` divides.
+  let last = '';
   const blank = (char) => (char === '\n' ? '\n' : ' ');
   for (let index = 0; index < code.length; index++) {
     const char = code[index];
@@ -133,26 +138,35 @@ function withoutStrings(code) {
       else if (char === quote || (char === '\n' && quote !== '`')) {
         quote = null;
         out += char;
+        last = char;
       } else if (quote === '`' && char === '$' && code[index + 1] === '{') {
         templates.push(depth);
         quote = null;
         out += '${';
+        last = '{';
         index++;
       } else out += blank(char);
     } else if (char === "'" || char === '"' || char === '`') {
       quote = char;
       out += char;
-    } else if (char === '/' && /(?:^|[(,=:[!&|?{};\n]|\breturn)\s*$/.test(out.slice(-40))) {
+    } else if (
+      char === '/' &&
+      (last === '' ||
+        '(,=:[!&|?{};+-*%<>~^'.includes(last) ||
+        /\b(?:return|typeof|case|await|yield|throw|else|in|of|void|delete|do)\s*$/.test(out.slice(-12)))
+    ) {
       // A regular expression: a quote inside it opens no string.
       let end = index + 1;
       for (let inClass = false; end < code.length && code[end] !== '\n'; end++) {
-        if (code[end] === '\\') end++;
+        if (code[end] === '\\' && code[end + 1] !== '\n') end++;
         else if (code[end] === '[') inClass = true;
         else if (code[end] === ']') inClass = false;
         else if (code[end] === '/' && !inClass) break;
       }
       out += '/' + code.slice(index + 1, end).replace(/[^\n]/g, ' ');
       index = end - 1;
+      // What follows the closing `/` divides.
+      last = ')';
     } else if (char === '}' && templates.length > 0 && templates.at(-1) === depth) {
       templates.pop();
       quote = '`';
@@ -161,6 +175,7 @@ function withoutStrings(code) {
       if (char === '{') depth++;
       else if (char === '}') depth--;
       out += char;
+      if (/\S/.test(char)) last = char;
     }
   }
   return out;
