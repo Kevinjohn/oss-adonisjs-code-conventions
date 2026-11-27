@@ -362,6 +362,9 @@ test('a departure number must be an entry of the departures list, marked Alignin
     assert.match(built('2', 'DECISIONS.md').stderr, /as an integer/);
     assert.match(built(7, 'DECISIONS.md').stderr, /has no entry numbered 7/);
     assert.match(built(1, 'DECISIONS.md').stderr, /must be marked \*\*Aligning\*\*/);
+    run.write('conventions.config.json', JSON.stringify({ departures: { file: 'DECISIONS.md', heading: 'Framework departures' } }));
+    run.write('DECISIONS.md', '# Product\n\n2. **Aligning (#3)** Another list.\n\n# Framework departures\n\n1. Controllers catch in one place.\n2. **Aligning (#12)** Controllers catch.\n\n# Later\n\n7. **Aligning (#4)** Not a departure.\n');
+    assert.match(built(7, 'DECISIONS.md').stderr, /has no entry numbered 7/);
     const covered = built(2, 'DECISIONS.md');
     assert.equal(covered.status, 0, covered.stderr);
     assert.equal(existsSync(join(run.runDir, 'verify.json')), false);
@@ -395,6 +398,21 @@ test('run.json with an unknown kind is refused, and a diff holds work that is no
     run.write(CONTROLLER, 'export default class PostsController {\n  try {\n    return ctx\n  }\n  index() {}\n}\n');
     assert.equal(report('prepare', run.runDir).status, 0);
     assert.deepEqual(readOut(run.runDir, 'files.json').changed, { [CONTROLLER]: [[5, 5]] });
+    writeRecord(run.runDir, record());
+    report('build', run.runDir);
+    const absent = { item: 'CTL-6', path: 'app/exceptions/handler.ts', line: null, sentence: SENTENCE, code: '', observed: 'no handler' };
+    writeRecord(run.runDir, record({ findings: [absent] }));
+    assert.match(report('build', run.runDir).stderr, /only in a review of the whole root/);
+    const previous = join(run.runDir, 'previous.json');
+    writeFileSync(previous, JSON.stringify({ findings: [{ key: 'CTL-6:old', item: 'CTL-6', section: SECTION, path: CONTROLLER, line: 2, code: '  try {' }, { key: 'CTL-6:gone', item: 'CTL-6', section: SECTION, path: CONTROLLER, line: 3, code: 'return removed' }] }));
+    writeRecord(run.runDir, record({ items: ITEMS.map((item) => ({ item, result: 'pass', reason: 'not on a changed line' })), findings: [] }));
+    const built = report('build', run.runDir, '--previous', previous);
+    assert.equal(built.status, 0, built.stderr);
+    assert.deepEqual(readOut(run.runDir, 'findings.json').resolved.map((entry) => entry.key), ['CTL-6:gone']);
+    for (const diff of ['main...HEAD', '--cached', 'no-such-branch']) {
+      writeFileSync(join(run.runDir, 'run.json'), JSON.stringify({ ...readOut(run.runDir, 'run.json'), diff }));
+      assert.match(report('prepare', run.runDir).stderr, /^run\.json: "diff" is /);
+    }
   } finally {
     run.clean();
   }

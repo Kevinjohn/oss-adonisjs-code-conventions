@@ -63,7 +63,8 @@ const TEST_FILE = /(?:^|\/)tests?\/|\.(?:spec|test)\.[cm]?[jt]sx?$|^bin\/test\.[
 const RUNNABLE = /^(?:grep|ls)\b/;
 // The check of released migrations is run against the base of the review, when it has one.
 const DIFF_CHECK = /^git diff --name-status origin\/main -- /;
-const REVISION = /^[\w./@^~-]+$/;
+// One revision: not an option and not a range.
+const REVISION = /^(?!-)(?!.*\.\.)[\w./@^~-]+$/;
 // A law is covered only by an entry marked Aligning that names an issue.
 const ALIGNING = /^\*\*Aligning \([^)]*#\d+/;
 const MAX_CHECK_LINES = 200;
@@ -240,6 +241,16 @@ function isExcluded(path, include, kind) {
   );
 }
 
+/** The commit a review's branch left its base at. */
+function forkPoint(root, base) {
+  try {
+    const options = { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] };
+    return execFileSync('git', ['merge-base', base, 'HEAD'], options).trim();
+  } catch {
+    return fail([`run.json: "diff" is "${base}", which is not a branch or a commit of this repository`]);
+  }
+}
+
 /**
  * The lines the working tree adds or changes since it left the base, as `[first, last]` ranges for
  * each file. A change that is not committed yet counts: the reviewer reads the files as they are.
@@ -247,8 +258,7 @@ function isExcluded(path, include, kind) {
 function changedRanges(root, base) {
   const changed = {};
   let path = null;
-  const [from] = git(root, ['merge-base', base, 'HEAD']);
-  for (const line of git(root, ['diff', '-U0', '--relative', '--diff-filter=d', from])) {
+  for (const line of git(root, ['diff', '-U0', '--relative', '--diff-filter=d', forkPoint(root, base)])) {
     const file = line.match(/^\+\+\+ b\/(.+)$/);
     if (file) {
       path = file[1];
@@ -292,7 +302,7 @@ function runCheck(check, run, scope) {
     const note = onDiff ? 'needs a diff, and this review has none' : 'not a command the script runs';
     return { ...base, result: 'not run', note, lines: [] };
   }
-  const command = onDiff ? check.command.replace('origin/main', run.diff) : check.command;
+  const command = onDiff ? check.command.replace('origin/main', forkPoint(run.root, run.diff)) : check.command;
   // A folder the repository does not have is not output: what the command says about it is dropped.
   const done = spawnSync('bash', ['-c', command], {
     cwd: run.root,
@@ -371,6 +381,18 @@ function departureCheck(run) {
     const [top] = git(run.root, ['rev-parse', '--show-toplevel']);
     const path = resolve(top, run.departures);
     if (existsSync(path)) text = readFileSync(path, 'utf8');
+    // The repository's own configuration may say which heading of the file the list is under.
+    const config = join(top, 'conventions.config.json');
+    const named = existsSync(config) ? (JSON.parse(readFileSync(config, 'utf8')).departures ?? {}) : {};
+    if (text !== null && named.heading && (named.file ?? 'DECISIONS.md') === run.departures) {
+      const lines = text.split('\n');
+      const start = lines.findIndex((line) => /^#+ /.test(line) && line.replace(/^#+ /, '').trim() === named.heading);
+      if (start !== -1) {
+        const level = lines[start].match(/^#+/)[0].length;
+        const length = lines.slice(start + 1).findIndex((line) => new RegExp(`^#{1,${level}} `).test(line));
+        text = lines.slice(start + 1, length === -1 ? undefined : start + 1 + length).join('\n');
+      }
+    }
   }
   return (number, item) => {
     if (!Number.isInteger(number)) return '"departure" is the number of an entry, as an integer, or null';
@@ -378,7 +400,10 @@ function departureCheck(run) {
     if (text === null) return `the departures list "${run.departures}" does not exist`;
     const entries = [...text.matchAll(new RegExp(`^${number}\\. (.*)$`, 'gm'))];
     if (entries.length === 0) return `"${run.departures}" has no entry numbered ${number}`;
-    if (item.tier === 'Law' && !entries.some((entry) => ALIGNING.test(entry[1]))) {
+    if (entries.length > 1) {
+      return `"${run.departures}" has more than one entry numbered ${number}; set "departures.heading" in conventions.config.json`;
+    }
+    if (item.tier === 'Law' && !ALIGNING.test(entries[0][1])) {
       return `the item is a law, so entry ${number} must be marked **Aligning** and name an issue`;
     }
     return '';
@@ -393,6 +418,7 @@ function build(runDir, previousPath) {
   if (!scope) fail([...errors, 'Run "prepare" before "build".']);
   const inScope = new Set(scope.files);
   const departureProblem = departureCheck(run);
+  const wholeRoot = run.scope === 'both' && !run.diff && (!run.folder || run.folder === '.');
   const rejectedKeys = new Map();
 
   const findings = [];
@@ -453,6 +479,8 @@ function build(runDir, previousPath) {
       else if ((known || !absent) && !read.has(finding.path)) say(`${where}: the file is not in "files_read"`);
       else if (!known && absent && existsSync(resolve(run.root, finding.path))) {
         say(`${where}: the file exists and is not in files.json, so it is not in this review`);
+      } else if (!known && absent && !wholeRoot) {
+        say(`${where}: a missing file is a finding only in a review of the whole root (scope both, folder ".", no diff)`);
       }
       if ((finding.departure ?? null) !== null) {
         const problem = departureProblem(finding.departure, item);
@@ -599,8 +627,12 @@ function build(runDir, previousPath) {
   // Nor is a finding in a file this review did not hold: it is resolved when its file is in
   // scope, or when the file it quoted is gone from the reviewed folder.
   const folder = !run.folder || run.folder === '.' ? '' : `${run.folder.replace(/\/$/, '')}/`;
+  // With a diff, a line the diff left alone cannot be found again, so only a quote that is gone
+  // from its file is resolved.
+  const quoteGone = (entry) =>
+    !squash(entry.code) || locate(readFileSync(resolve(run.root, entry.path), 'utf8'), entry.code, entry.line) === null;
   const held = (entry) =>
-    inScope.has(entry.path) ||
+    (inScope.has(entry.path) && (!scope.changed || quoteGone(entry))) ||
     (squash(entry.code) && entry.path.startsWith(folder) && !existsSync(resolve(run.root, entry.path)));
   const resolved = (previous?.findings ?? []).filter(
     (entry) =>
