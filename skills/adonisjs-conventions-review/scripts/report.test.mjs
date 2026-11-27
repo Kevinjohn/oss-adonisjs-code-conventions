@@ -227,10 +227,13 @@ test('list prints slugs only, "all" leaves the tests section out of a code revie
   }
 });
 
-test('a section tells the reviewer its checks were already run', () => {
-  const printed = report('section', 'every-change/vocabulary').stdout;
-  assert.match(printed, /^Mechanical checks, already run \(their output is in the checks file; run none\):$/m);
+test('a section tells the reviewer which checks were run, and has no heading when none is left', () => {
+  const printed = report('section', 'applications/controllers').stdout;
+  assert.match(printed, /^Mechanical checks \(the checks file has the output .* run none\):$/m);
   assert.doesNotMatch(printed, /^Mechanical checks:$/m);
+  const vocabulary = report('section', 'every-change/vocabulary').stdout;
+  assert.doesNotMatch(vocabulary, /Mechanical checks|check-terminology/);
+  assert.match(vocabulary, /Not reviewed here: VOC-2\./);
 });
 
 test('a review of tests runs the sections of part 1 and the section about tests only', () => {
@@ -261,6 +264,174 @@ test('a repeated finding is counted once, and an unclear result needs an unclear
     const unclear = [{ item: 'CTL-7', path: CONTROLLER, question: 'Does a status set through a variable count?', read: [] }];
     writeRecord(run.runDir, { ...base, items, unclear });
     assert.equal(report('build', run.runDir).status, 0);
+  } finally {
+    run.clean();
+  }
+});
+
+test('the record in SKILL.md names only items a reviewer is given', () => {
+  const skill = readFileSync(new URL('../SKILL.md', import.meta.url), 'utf8');
+  const example = JSON.parse(skill.match(/```json\n(\{\n  "reviewer"[\s\S]*?)\n```/)[1]);
+  const run = scratch();
+  try {
+    report('prepare', run.runDir);
+    const named = example.items.map((entry) => entry.item);
+    const rest = ITEMS.filter((item) => !named.includes(item)).map((item) => ({ item, result: 'pass' }));
+    const [finding] = example.findings;
+    writeRecord(run.runDir, {
+      ...example,
+      files_read: [CONTROLLER],
+      items: [...example.items, ...rest],
+      findings: [{ ...finding, path: CONTROLLER, code: '  try {' }],
+      unclear: example.unclear.map((entry) => ({ ...entry, path: CONTROLLER })),
+    });
+    const built = report('build', run.runDir);
+    assert.equal(built.status, 0, built.stderr);
+  } finally {
+    run.clean();
+  }
+});
+
+test('a previous finding in a file this review did not hold is not resolved', () => {
+  const run = scratch();
+  const admin = 'app/controllers/admin/users_controller.ts';
+  try {
+    run.write(admin, 'export default class UsersController {\n  try {\n    return 1\n  }\n}\n');
+    run.git('add', '-A');
+    run.git('commit', '-q', '-m', 'second');
+    report('prepare', run.runDir);
+    const second = { ...record().findings[0], path: admin, code: '    return 1', sentence: 'The exception reaches the exception handler' };
+    writeRecord(run.runDir, record({ files_read: [CONTROLLER, admin], findings: [record().findings[0], second] }));
+    assert.equal(report('build', run.runDir).status, 0);
+    const previous = join(run.runDir, 'previous.json');
+    writeFileSync(previous, readFileSync(join(run.runDir, 'findings.json')));
+    const narrowed = { ...readOut(run.runDir, 'run.json'), folder: 'app/controllers/admin' };
+    writeFileSync(join(run.runDir, 'run.json'), JSON.stringify(narrowed));
+    report('prepare', run.runDir);
+    const clean = { files_read: [admin], items: ITEMS.map((item) => ({ item, result: 'pass', reason: 'fixed' })), findings: [] };
+    writeRecord(run.runDir, record(clean));
+    const built = report('build', run.runDir, '--previous', previous);
+    assert.equal(built.status, 0, built.stderr);
+    assert.deepEqual(readOut(run.runDir, 'findings.json').resolved.map((entry) => entry.path), [admin]);
+  } finally {
+    run.clean();
+  }
+});
+
+test('a finding about a missing file needs no read, reaches the verifier with what is absent, and a rejected finding takes no key number', () => {
+  const run = scratch();
+  try {
+    report('prepare', run.runDir);
+    const [finding] = record().findings;
+    const absent = { item: 'CTL-6', path: 'app/exceptions/handler.ts', line: null, sentence: SENTENCE, code: '', observed: 'no handler file under app/exceptions' };
+    writeRecord(run.runDir, record({ findings: [finding, absent] }));
+    const built = report('build', run.runDir);
+    assert.equal(built.status, 0, built.stderr);
+    const verify = readOut(run.runDir, 'verify.json');
+    assert.deepEqual(verify.map((entry) => [entry.index, entry.observed]), [[0, undefined], [1, absent.observed]]);
+    writeRecord(run.runDir, record({ findings: [{ ...absent, path: 'public/index.html' }] }));
+    assert.match(report('build', run.runDir).stderr, /the file exists and is not in files\.json/);
+    const rejected = { ...finding, verified: false, verifier: 'verifier-b', verify_note: 'recovers and answers' };
+    writeRecord(run.runDir, record({ findings: [rejected, { ...finding, code: '  try {', line: 2, sentence: 'The exception reaches the exception handler' }] }));
+    assert.equal(report('build', run.runDir).status, 0);
+    const out = readOut(run.runDir, 'findings.json');
+    assert.match(out.findings[0].key, /^CTL-6:[0-9a-f]{8}$/);
+    assert.equal(out.rejected.length, 1);
+  } finally {
+    run.clean();
+  }
+});
+
+test('a departure number must be an entry of the departures list, marked Aligning for a law', () => {
+  const run = scratch();
+  const withDeparture = (departure) =>
+    record({
+      items: ITEMS.map((item) => ({ item, result: item === 'CTL-6' ? 'departure' : 'pass' })),
+      findings: [{ ...record().findings[0], departure }],
+    });
+  const built = (departure, departures) => {
+    writeFileSync(join(run.runDir, 'run.json'), JSON.stringify({ ...readOut(run.runDir, 'run.json'), departures }));
+    writeRecord(run.runDir, withDeparture(departure));
+    return report('build', run.runDir);
+  };
+  try {
+    run.write('DECISIONS.md', '# Framework departures\n\n1. Controllers catch in one place.\n2. **Aligning (#12)** Controllers catch.\n');
+    report('prepare', run.runDir);
+    assert.match(built(2, null).stderr, /run\.json names no departures list/);
+    assert.match(built(2, 'MISSING.md').stderr, /does not exist/);
+    assert.match(built('2', 'DECISIONS.md').stderr, /as an integer/);
+    assert.match(built(7, 'DECISIONS.md').stderr, /has no entry numbered 7/);
+    assert.match(built(1, 'DECISIONS.md').stderr, /must be marked \*\*Aligning\*\*/);
+    run.write('conventions.config.json', JSON.stringify({ departures: { file: 'DECISIONS.md', heading: 'Framework departures' } }));
+    run.write('DECISIONS.md', '# Product\n\n2. **Aligning (#3)** Another list.\n\n# Framework departures\n\n1. Controllers catch in one place.\n2. **Aligning (#12)** Controllers catch.\n\n# Later\n\n7. **Aligning (#4)** Not a departure.\n');
+    assert.match(built(7, 'DECISIONS.md').stderr, /has no entry numbered 7/);
+    const covered = built(2, 'DECISIONS.md');
+    assert.equal(covered.status, 0, covered.stderr);
+    assert.equal(existsSync(join(run.runDir, 'verify.json')), false);
+  } finally {
+    run.clean();
+  }
+});
+
+test('a check on a folder the repository lacks prints nothing, and a listing asks for no reason', () => {
+  const run = scratch({ sections: ['applications/exceptions', 'applications/configuration-and-environment'] });
+  try {
+    run.write('app/exceptions/handler.ts', 'export default class HttpExceptionHandler {}\n');
+    run.git('add', '-A');
+    run.git('commit', '-q', '-m', 'second');
+    assert.equal(report('prepare', run.runDir).status, 0);
+    const configuration = readOut(run.runDir, 'checks/applications--configuration-and-environment.json');
+    const onConfig = configuration.find((check) => check.items.includes('CFG-4'));
+    assert.deepEqual([onConfig.result, onConfig.lines], ['as stated', []]);
+    const listing = readOut(run.runDir, 'checks/applications--exceptions.json').find((check) => /^ls /.test(check.command));
+    assert.deepEqual([listing.result, listing.lines], ['listing', ['app/exceptions/handler.ts']]);
+  } finally {
+    run.clean();
+  }
+});
+
+test('run.json with an unknown kind is refused, and a diff holds work that is not committed', () => {
+  const run = scratch({ kind: 'aplication' });
+  try {
+    assert.match(report('prepare', run.runDir).stderr, /"kind" is application, package, frontend/);
+    writeFileSync(join(run.runDir, 'run.json'), JSON.stringify({ ...readOut(run.runDir, 'run.json'), kind: 'application', diff: 'HEAD' }));
+    run.write(CONTROLLER, 'export default class PostsController {\n  try {\n    return ctx\n  }\n  index() {}\n}\n');
+    assert.equal(report('prepare', run.runDir).status, 0);
+    assert.deepEqual(readOut(run.runDir, 'files.json').changed, { [CONTROLLER]: [[5, 5]] });
+    writeRecord(run.runDir, record());
+    report('build', run.runDir);
+    const absent = { item: 'CTL-6', path: 'app/exceptions/handler.ts', line: null, sentence: SENTENCE, code: '', observed: 'no handler' };
+    writeRecord(run.runDir, record({ findings: [absent] }));
+    assert.match(report('build', run.runDir).stderr, /only in a review of the whole root/);
+    const previous = join(run.runDir, 'previous.json');
+    writeFileSync(previous, JSON.stringify({ findings: [{ key: 'CTL-6:old', item: 'CTL-6', section: SECTION, path: CONTROLLER, line: 2, code: '  try {' }, { key: 'CTL-6:gone', item: 'CTL-6', section: SECTION, path: CONTROLLER, line: 3, code: 'return removed' }] }));
+    writeRecord(run.runDir, record({ items: ITEMS.map((item) => ({ item, result: 'pass', reason: 'not on a changed line' })), findings: [] }));
+    const built = report('build', run.runDir, '--previous', previous);
+    assert.equal(built.status, 0, built.stderr);
+    assert.deepEqual(readOut(run.runDir, 'findings.json').resolved.map((entry) => entry.key), ['CTL-6:gone']);
+    for (const diff of ['main...HEAD', '--cached', 'no-such-branch']) {
+      writeFileSync(join(run.runDir, 'run.json'), JSON.stringify({ ...readOut(run.runDir, 'run.json'), diff }));
+      assert.match(report('prepare', run.runDir).stderr, /^run\.json: "diff" is /);
+    }
+  } finally {
+    run.clean();
+  }
+});
+
+test('a package review leaves its docs folder and the generated schema out, and keeps the changelog', () => {
+  const run = scratch({ kind: 'package', sections: ['packages/tests-and-release'] });
+  try {
+    run.write('docs/.vitepress/config.ts', 'export default {}\n');
+    run.write('database/schema.ts', 'export {}\n');
+    run.write('CHANGELOG.md', '# Changelog\n');
+    run.write('bin/test.ts', 'export {}\n');
+    run.git('add', '-A');
+    run.git('commit', '-q', '-m', 'second');
+    report('prepare', run.runDir);
+    assert.deepEqual(readOut(run.runDir, 'files.json').files, ['CHANGELOG.md', CONTROLLER, 'bin/test.ts']);
+    writeFileSync(join(run.runDir, 'run.json'), JSON.stringify({ ...readOut(run.runDir, 'run.json'), scope: 'tests' }));
+    report('prepare', run.runDir);
+    assert.deepEqual(readOut(run.runDir, 'files.json').files, ['bin/test.ts']);
   } finally {
     run.clean();
   }
