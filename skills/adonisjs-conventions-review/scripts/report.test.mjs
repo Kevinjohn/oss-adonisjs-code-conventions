@@ -227,6 +227,12 @@ test('list prints slugs only, "all" leaves the tests section out of a code revie
   }
 });
 
+test('a section tells the reviewer its checks were already run', () => {
+  const printed = report('section', 'every-change/vocabulary').stdout;
+  assert.match(printed, /^Mechanical checks, already run \(their output is in the checks file; run none\):$/m);
+  assert.doesNotMatch(printed, /^Mechanical checks:$/m);
+});
+
 test('a review of tests runs the sections of part 1 and the section about tests only', () => {
   const run = scratch({ sections: 'all', scope: 'tests' });
   try {
