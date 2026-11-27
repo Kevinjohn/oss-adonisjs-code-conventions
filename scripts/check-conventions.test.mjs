@@ -288,7 +288,7 @@ const SHAPES = [
   ['IMP-5', 'package', false, { 'tests/a.spec.ts': "assert.equal(file, \"import auth from '#middleware/auth_middleware'\")\n" }],
   ['IMP-5', 'package', false, { 'src/a.ts': "const text = `a ${kind ? `x` : ''} import z from '#q'`\n" }],
   ['IMP-5', 'package', true, { 'src/a.ts': "const text = `import x from '#a'`\nimport b from '#c'\n" }],
-  ['IMP-5', 'package', true, { 'src/a.ts': "const quotes = /['\"`]/\nconst load = () => import('#models/user')\n" }],
+  ['IMP-5', 'package', true, { 'src/a.ts': "const tick = /`/\nconst load = () => import('#models/user')\n" }],
   ['IMP-5', 'package', true, { 'src/a.ts': "const text = `${await import('#models/user')}`\n" }],
   ['IMP-4', 'application', false, { 'app/services/a_service.ts': "export const stub = \"import { b } from './b_service.js'\"\n" }],
   ['NAM-3', 'package', false, { 'src/render.ts': 'export const files = `\nexport default class User {}\n` + `\nexport default class Post {}\n`\n' }],
